@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: cbm-agent
+  description: Condition-Based Maintenance agent — detects OT sensor anomalies and triggers SAP PM notifications
+  annotations:
+    litellm/model: jsl-quality
+    temporal/task-queue: cbm-agent
+    demo/ui: "CBM Agent — monitors OT sensor anomalies and triggers maintenance workflows"
+spec:
+  type: ai-agent
+  lifecycle: production
+  owner: operations-team
+  system: jslmind-platform

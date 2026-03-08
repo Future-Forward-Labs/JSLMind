@@ -1,0 +1,58 @@
+# Environment — never commit secrets
+.env
+.env.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Java / Maven / Gradle
+target/
+.gradle/
+build/
+*.class
+*.jar
+
+# Node / React
+node_modules/
+frontend/dist/
+frontend/.next/
+.npm
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Docker volumes (local dev artefacts)
+qdrant_data/
+ollama_models/
+grafana_data/
+minio_data/
+
+# Generated docs and keys
+rag/docs/incoming/*
+!rag/docs/incoming/.gitkeep
+platform/llm-keys/.generated/
+
+# Corporate CA certs (contain org PKI — do not commit)
+infra/netskope-root.pem
+infra/netskope-intermediate.pem
+infra/*.pem
+infra/*.crt
+
+# dbt
+data-platform/dbt/target/
+data-platform/dbt/dbt_packages/
+data-platform/dbt/logs/
+
+# Claude Code settings
+.claude/

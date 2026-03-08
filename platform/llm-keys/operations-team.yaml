@@ -1,0 +1,9 @@
+team_name: operations
+team_id: operations-team
+monthly_budget_inr: 50000
+model_tier: jsl-quality
+allowed_models:
+  - jsl-fast
+  - jsl-quality
+  - jsl-embed
+description: Plant operations, inventory agents, anomaly detection

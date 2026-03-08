@@ -1,0 +1,95 @@
+{
+  "title": "JSLMind Platform Health",
+  "uid": "jslmind-platform",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Services Up",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "count(up == 1)",
+          "legendFormat": "Online"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Prometheus Targets",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [
+        {
+          "expr": "count(up)",
+          "legendFormat": "Total"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Service Health",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 16, "x": 8, "y": 0},
+      "targets": [
+        {
+          "expr": "up",
+          "legendFormat": "{{job}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "LiteLLM — Requests per Minute",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 4},
+      "targets": [
+        {
+          "expr": "rate(litellm_requests_total[1m])",
+          "legendFormat": "RPM"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "LiteLLM — Token Spend by Team",
+      "type": "piechart",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 4},
+      "targets": [
+        {
+          "expr": "sum by (team_id) (litellm_tokens_total)",
+          "legendFormat": "{{team_id}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "RedPanda — Messages/sec (plant.sensors)",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 10},
+      "targets": [
+        {
+          "expr": "rate(redpanda_kafka_produce_throttle_count[1m])",
+          "legendFormat": "produce/s"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Temporal — Workflow Executions",
+      "type": "stat",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 10},
+      "targets": [
+        {
+          "expr": "temporal_workflow_completed_count",
+          "legendFormat": "Completed"
+        }
+      ]
+    }
+  ],
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {}
+}

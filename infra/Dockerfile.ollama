@@ -1,0 +1,10 @@
+FROM ollama/ollama:latest
+
+# Add corporate CA certs so `ollama pull` works behind a proxy (e.g. Netskope).
+# These files are gitignored — place them in infra/ before building:
+#   infra/netskope-root.pem
+#   infra/netskope-intermediate.pem
+# If you are not behind a corporate proxy, remove these three lines.
+COPY netskope-root.pem /usr/local/share/ca-certificates/netskope-root.crt
+COPY netskope-intermediate.pem /usr/local/share/ca-certificates/netskope-intermediate.crt
+RUN update-ca-certificates

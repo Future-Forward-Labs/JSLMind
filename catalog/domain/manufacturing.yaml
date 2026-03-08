@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: manufacturing
+  description: JSL manufacturing operations domain — stainless steel production, quality, and maintenance
+spec:
+  owner: operations-team

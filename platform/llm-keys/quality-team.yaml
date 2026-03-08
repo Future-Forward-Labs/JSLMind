@@ -1,0 +1,10 @@
+team_name: quality
+team_id: quality-team
+monthly_budget_inr: 40000
+model_tier: jsl-quality
+allowed_models:
+  - jsl-fast
+  - jsl-quality
+  - jsl-embed
+  - jsl-cloud
+description: Surface inspection, grade specification Q&A, quality document RAG

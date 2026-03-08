@@ -1,0 +1,54 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Phase 1 — Core platform
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: postgres
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+
+  # Phase 2 — LLM Gateway (added by Phase 2)
+  - job_name: litellm
+    static_configs:
+      - targets: ['litellm-proxy:4000']
+    metrics_path: /metrics
+
+  # Phase 3 — Catalog (added by Phase 3)
+  - job_name: backstage
+    static_configs:
+      - targets: ['backstage:7007']
+    metrics_path: /metrics
+
+  # Phase 4 — Medallion (added by Phase 4)
+  - job_name: camel-integration
+    static_configs:
+      - targets: ['camel-integration:8080']
+    metrics_path: /actuator/prometheus
+
+  - job_name: airflow
+    static_configs:
+      - targets: ['airflow-webserver:8080']
+    metrics_path: /metrics
+
+  # Phase 5 — OT Streaming (added by Phase 5)
+  - job_name: redpanda
+    static_configs:
+      - targets: ['redpanda:9644']
+    metrics_path: /metrics
+
+  # Phase 6 — RAG (added by Phase 6)
+  - job_name: rag-service
+    static_configs:
+      - targets: ['rag-service:8001']
+    metrics_path: /metrics
+
+  # Phase 8 — Backend (added by Phase 8)
+  - job_name: fastapi-backend
+    static_configs:
+      - targets: ['fastapi-backend:8003']
+    metrics_path: /metrics

@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: quality-agent
+  description: Surface defect detection agent for Grade 316L production runs using Isolation Forest + LlamaIndex RAG
+  annotations:
+    litellm/model: jsl-quality
+    temporal/task-queue: quality-agent
+    demo/ui: "Quality Agent — detects surface defects on 316L grade production runs"
+spec:
+  type: ai-agent
+  lifecycle: production
+  owner: quality-team
+  system: jslmind-platform

@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sap-mm-connector
+  description: Apache Camel route that polls SAP MM (MARA/EKPO/AUFK) every 60s and lands data in MinIO Bronze bucket
+  annotations:
+    camel/route-id: sap-to-bronze
+    source/system: SAP
+spec:
+  type: integration
+  lifecycle: production
+  owner: operations-team
+  system: jslmind-platform

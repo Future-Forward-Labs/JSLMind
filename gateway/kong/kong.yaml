@@ -1,0 +1,47 @@
+_format_version: "3.0"
+_transform: true
+
+# JSLMind Kong Gateway — Declarative Configuration
+# Phase 8 activates rate-limiting and per-dept key enforcement.
+# Phase 2 stub: just routes /llm/* to LiteLLM.
+
+services:
+  - name: litellm-proxy
+    url: http://litellm-proxy:4000
+    routes:
+      - name: llm-route
+        paths: ["/llm"]
+        strip_path: true
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 60
+          policy: local
+
+  - name: rag-service
+    url: http://rag-service:8001
+    routes:
+      - name: rag-route
+        paths: ["/rag"]
+        strip_path: true
+
+  - name: fastapi-backend
+    url: http://fastapi-backend:8003
+    routes:
+      - name: api-route
+        paths: ["/api"]
+        strip_path: false
+
+# Per-department consumers (keys injected by seed-litellm-keys.sh)
+consumers:
+  - username: operations-team
+    keyauth_credentials:
+      - key: "$(KONG_OPS_KEY)"
+
+  - username: finance-team
+    keyauth_credentials:
+      - key: "$(KONG_FIN_KEY)"
+
+  - username: quality-team
+    keyauth_credentials:
+      - key: "$(KONG_QUA_KEY)"

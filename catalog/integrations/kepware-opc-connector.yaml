@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kepware-opc-connector
+  description: Apache Camel MQTT bridge that streams Kepware OPC-UA sensor tags to RedPanda in real time
+  annotations:
+    camel/route-id: kepware-to-kafka
+    source/system: Kepware
+spec:
+  type: integration
+  lifecycle: production
+  owner: operations-team
+  system: jslmind-platform

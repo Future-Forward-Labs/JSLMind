@@ -1,0 +1,75 @@
+# JSLMind LiteLLM Proxy Configuration
+# Model aliases expose a stable name (jsl-fast, jsl-quality, jsl-embed, jsl-cloud)
+# regardless of which physical model is running. Switching models = config change only.
+
+model_list:
+  # ── jsl-fast: speed-critical paths (live UI, streaming, smoke tests) ──────
+  - model_name: jsl-fast
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://ollama:11434
+      stream: true
+
+  - model_name: jsl-fast   # cloud fallback if Ollama unavailable
+    litellm_params:
+      model: claude-haiku-4-5-20251001
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ── jsl-quality: accuracy-critical paths (agent reasoning, RAG answers) ──
+  - model_name: jsl-quality
+    litellm_params:
+      model: ollama/mistral:7b-instruct
+      api_base: http://ollama:11434
+
+  - model_name: jsl-quality  # cloud fallback
+    litellm_params:
+      model: claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ── jsl-embed: RAG embeddings (dim=1024, dense+sparse capable) ───────────
+  - model_name: jsl-embed
+    litellm_params:
+      model: ollama/bge-m3
+      api_base: http://ollama:11434
+
+  # ── jsl-cloud: force cloud model for highest quality (demo fallback net) ──
+  - model_name: jsl-cloud
+    litellm_params:
+      model: claude-sonnet-4-6
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+router_settings:
+  routing_strategy: least-busy
+  fallbacks:
+    - {"jsl-fast": ["jsl-fast"]}
+    - {"jsl-quality": ["jsl-quality"]}
+  num_retries: 2
+  retry_after: 5
+
+litellm_settings:
+  # WARNING: Do not use ssl_verify: false in production.
+  # This is set for demo only — the corporate proxy intercepts HTTPS on this network.
+  # For production: remove this line and mount the CA cert bundle into the container instead.
+  ssl_verify: false
+  # Token cost tracking and trace attribution to Langfuse
+  success_callback: ["langfuse"]
+  failure_callback: ["langfuse"]
+  langfuse_public_key: os.environ/LANGFUSE_PUBLIC_KEY
+  langfuse_secret_key: os.environ/LANGFUSE_SECRET_KEY
+  # Semantic caching via Redis (reduces repeat query cost)
+  cache: true
+  cache_params:
+    type: redis
+    host: redis
+    port: 6379
+    password: os.environ/REDIS_PASSWORD
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  # Per-team virtual keys managed via seed-litellm-keys.sh
+  database_url: os.environ/DATABASE_URL
+  store_model_in_db: true
+  store_prompts_in_spend_logs: true
+  # Budget tracking
+  budget_duration: 1mo
+  max_budget: 1000  # USD hard cap across all teams per month

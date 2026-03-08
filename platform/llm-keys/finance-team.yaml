@@ -1,0 +1,9 @@
+team_name: finance
+team_id: finance-team
+monthly_budget_inr: 30000
+model_tier: jsl-quality
+allowed_models:
+  - jsl-fast
+  - jsl-quality
+  - jsl-embed
+description: Costing analytics, variance analysis, production cost reporting

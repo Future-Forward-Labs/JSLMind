@@ -21,12 +21,13 @@ check() {
 echo "==> Phase 3 Verification — Backstage Agent Catalog"
 echo ""
 
-# TEST 1 — Backstage liveness
-health=$(curl -sf --max-time 10 "$BACKSTAGE_BASE_URL/healthcheck" 2>/dev/null || echo "error")
-if echo "$health" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('status')=='ok' else 1)" 2>/dev/null; then
+# TEST 1 — Backstage liveness (200 from catalog API = backend is up)
+health_code=$(curl -so /dev/null -w "%{http_code}" --max-time 10 \
+  "$BACKSTAGE_BASE_URL/api/catalog/entities?limit=1" 2>/dev/null || echo "000")
+if [[ "$health_code" == "200" ]]; then
   check "Backstage health" "ok"
 else
-  check "Backstage health" "$health"
+  check "Backstage health" "http-$health_code"
 fi
 
 # TEST 2–8 — All 7 catalog entities present

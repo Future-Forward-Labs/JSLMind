@@ -1,0 +1,6 @@
+FROM ghcr.io/berriai/litellm:main-latest
+
+# Netskope proxy intercepts HTTPS — disable SSL verification for outbound API calls.
+# ssl_verify: false is set in gateway/litellm_config.yaml.
+# For production: replace with proper CA cert bundle injection.
+ENV PYTHONDONTWRITEBYTECODE=1

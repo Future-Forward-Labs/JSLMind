@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: inventory-agent
+  description: Monitors SAP MM stock levels and raises reorder alerts via Temporal workflow
+  annotations:
+    litellm/model: jsl-quality
+    temporal/task-queue: inventory-agent
+    demo/ui: "Inventory Agent — tracks SAP MM stock levels and flags reorder alerts"
+spec:
+  type: ai-agent
+  lifecycle: production
+  owner: operations-team
+  system: jslmind-platform

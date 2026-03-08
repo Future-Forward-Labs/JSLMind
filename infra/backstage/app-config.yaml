@@ -9,6 +9,8 @@ backend:
   baseUrl: http://localhost:7007
   cors:
     origin: http://localhost:7007
+  auth:
+    dangerouslyDisableDefaultAuthPolicy: true  # Demo only — enable auth policy in production
 
 catalog:
   rules:
