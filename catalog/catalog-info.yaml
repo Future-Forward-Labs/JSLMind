@@ -1,0 +1,17 @@
+# catalog/catalog-info.yaml
+# Root Location — Backstage discovers all entities from here.
+# Phase 7: append a new file: entry for each dynamically registered agent.
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: jslmind-catalog-root
+  description: Root catalog location for JSLMind demo platform
+spec:
+  targets:
+    - ./domain/manufacturing.yaml
+    - ./system/jslmind-platform.yaml
+    - ./agents/inventory-agent.yaml
+    - ./agents/cbm-agent.yaml
+    - ./agents/quality-agent.yaml
+    - ./integrations/sap-mm-connector.yaml
+    - ./integrations/kepware-opc-connector.yaml
