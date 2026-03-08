@@ -39,6 +39,7 @@ grafana_data/
 minio_data/
 
 # Generated docs and keys
+rag/docs/corpus/
 rag/docs/incoming/*
 !rag/docs/incoming/.gitkeep
 platform/llm-keys/.generated/
