@@ -49,6 +49,8 @@ infra/netskope-root.pem
 infra/netskope-intermediate.pem
 infra/*.pem
 infra/*.crt
+**/*.pem
+**/*.crt
 
 # dbt
 data-platform/dbt/target/

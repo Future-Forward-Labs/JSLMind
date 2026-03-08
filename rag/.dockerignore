@@ -1,0 +1,8 @@
+*.pem
+*.crt
+*.key
+tests/
+docs/corpus/
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -1,12 +1,11 @@
 FROM python:3.11-slim
 
-# Corporate proxy CA bundle (Netskope HTTPS interception)
-# Remove this section if building outside the corporate network
-COPY netskope-ca-bundle.pem /usr/local/share/ca-certificates/netskope-ca.crt
-RUN update-ca-certificates
-ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
-ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
-ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
+# Corporate proxy (e.g. Netskope): place your CA bundle at rag/netskope-ca-bundle.pem
+# before building, then uncomment the four lines below. The file is gitignored.
+# COPY netskope-ca-bundle.pem /usr/local/share/ca-certificates/netskope-ca.crt
+# RUN update-ca-certificates
+# ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+# ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt
 
 # System deps for unstructured PDF parsing
 RUN apt-get update && apt-get install -y --no-install-recommends \
