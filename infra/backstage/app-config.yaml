@@ -1,0 +1,18 @@
+# infra/backstage/app-config.yaml
+# Mounted as /app/app-config.production.yaml in the backstage container.
+# DB connection comes from APP_CONFIG_* env vars in docker-compose — no need to repeat here.
+
+app:
+  baseUrl: http://localhost:7007
+
+backend:
+  baseUrl: http://localhost:7007
+  cors:
+    origin: http://localhost:7007
+
+catalog:
+  rules:
+    - allow: [Domain, System, Component, Location]
+  locations:
+    - type: file
+      target: /catalog/catalog-info.yaml
