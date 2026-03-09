@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # verify-phase4.sh — health checks for Phase 4: Medallion Pipeline
-set -uo pipefail
+set -euo pipefail
 
 PASS=0; FAIL=0
 check() {
