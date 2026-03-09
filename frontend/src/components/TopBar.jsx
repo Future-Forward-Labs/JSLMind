@@ -14,7 +14,7 @@ export default function TopBar() {
     const fetchSpend = async () => {
       try {
         const r = await fetch('http://localhost:4000/spend/logs', {
-          headers: { Authorization: 'Bearer sk-jsl-master' },
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_LITELLM_KEY ?? 'sk-jsl-master'}` },
         })
         if (!r.ok) return
         const data = await r.json()

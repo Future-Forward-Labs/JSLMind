@@ -13,7 +13,7 @@ function useLiteLLMSpend() {
     const fetch_ = async () => {
       try {
         const r = await fetch('http://localhost:4000/spend/logs', {
-          headers: { Authorization: 'Bearer sk-jsl-master' },
+          headers: { Authorization: `Bearer ${import.meta.env.VITE_LITELLM_KEY ?? 'sk-jsl-master'}` },
         })
         if (!r.ok) return
         const data = await r.json()
@@ -35,9 +35,12 @@ function useLangfuseTraces() {
   const [traces, setTraces] = useState([])
   useEffect(() => {
     const fetch_ = async () => {
+      const pk = import.meta.env.VITE_LANGFUSE_PUBLIC_KEY
+      const sk = import.meta.env.VITE_LANGFUSE_SECRET_KEY
+      if (!pk || !sk) return
       try {
         const r = await fetch('http://localhost:3002/api/public/traces?limit=5', {
-          headers: { Authorization: 'Basic ' + btoa('pk-lf-placeholder:sk-lf-placeholder') },
+          headers: { Authorization: 'Basic ' + btoa(`${pk}:${sk}`) },
         })
         if (!r.ok) return
         const d = await r.json()

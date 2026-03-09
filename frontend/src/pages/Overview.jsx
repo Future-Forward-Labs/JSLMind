@@ -11,7 +11,7 @@ const SERVICES = [
   { name: 'Grafana',         port: 3001, url: 'http://localhost:3001',           healthUrl: 'http://localhost:3001/api/health' },
   { name: 'MinIO',           port: 9001, url: 'http://localhost:9001',           healthUrl: 'http://localhost:9000/minio/health/live' },
   { name: 'Kong',            port: 8000, url: 'http://localhost:8002',           healthUrl: 'http://localhost:8002/status' },
-  { name: 'Keycloak',        port: 8080, url: 'http://localhost:8080/admin',     healthUrl: 'http://localhost:8080/health' },
+  { name: 'Keycloak',        port: 8080, url: 'http://localhost:8080/admin',     healthUrl: 'http://localhost:8080/health/ready' },
 ]
 
 function useQuickStats() {
