@@ -59,3 +59,4 @@ data-platform/dbt/logs/
 
 # Claude Code settings
 .claude/
+bm25_index.pkl
