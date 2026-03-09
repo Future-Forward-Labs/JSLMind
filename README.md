@@ -115,6 +115,7 @@ bash scripts/seed-keycloak.sh
 | Service | URL | Username | Password |
 |---|---|---|---|
 | **JSLMind App** | http://localhost:3000 | Keycloak SSO | see `DEMO_USER_PASSWORD` in `.env` |
+| **JSLMind Demo Shell** | http://localhost:3000 | — | — (open) |
 | FastAPI Backend | http://localhost:8003 | — | — (open) |
 | Kong Proxy | http://localhost:8000 | — | — |
 | Kong Admin API | http://localhost:8002 | — | — |
@@ -160,6 +161,10 @@ docker compose up -d dify dify-web dify-worker n8n langgraph-service
 
 # ── Phase 8 — Unified UI ──────────────────────────────────────────────────────
 docker compose up -d kong fastapi-backend react-frontend
+
+# ── Demo Shell — Unified UI ────────────────────────────────────────────────────
+docker compose up -d frontend
+# Open http://localhost:3000 — demo shell active
 
 # ── Full stack (demo day) ─────────────────────────────────────────────────────
 docker compose up -d
@@ -313,6 +318,15 @@ rm rag/docs/incoming/demo_drop.txt
 ```
 
 Open http://localhost:6333/dashboard to browse the Qdrant vector collection.
+
+---
+
+### Demo Shell — Adding a New Phase
+
+When a phase is completed, update the demo shell:
+1. Create `frontend/src/pages/<PhaseName>.jsx` with live widgets for that phase
+2. Flip the sidebar entry from "coming soon" to active in `frontend/src/components/Sidebar.jsx`
+3. Rebuild: `docker compose up -d --build frontend`
 
 ---
 
