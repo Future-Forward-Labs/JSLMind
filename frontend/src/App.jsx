@@ -5,6 +5,7 @@ import Overview from './pages/Overview.jsx'
 import HybridRAG from './pages/HybridRAG.jsx'
 import AgentCatalog from './pages/AgentCatalog.jsx'
 import Observability from './pages/Observability.jsx'
+import MedallionPipeline from './pages/MedallionPipeline.jsx'
 
 export default function App() {
   return (
@@ -17,7 +18,8 @@ export default function App() {
             <Route path="/"        element={<Overview />} />
             <Route path="/rag"     element={<HybridRAG />} />
             <Route path="/catalog" element={<AgentCatalog />} />
-            <Route path="/observe" element={<Observability />} />
+            <Route path="/observe"   element={<Observability />} />
+            <Route path="/medallion" element={<MedallionPipeline />} />
           </Routes>
         </main>
       </div>
