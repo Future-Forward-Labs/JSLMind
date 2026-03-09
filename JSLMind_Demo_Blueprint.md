@@ -588,17 +588,17 @@ services:
 ## 12. 7-Day Timeline
 
 ### Day 1 — Infra + Catalog + Integration Skeleton
-- [ ] Docker Compose: all services up (RedPanda, MinIO, Airflow, Temporal, Qdrant, Dify, n8n, Postgres, Redis)
-- [ ] Backstage: standalone deploy + seed 7 catalog entities (`catalog-info.yaml` per entity)
-- [ ] Apache Camel: project init + 4 route skeletons (SAP, MQTT, SharePoint, SAP PM stub)
+- [x] Docker Compose: all services up (RedPanda, MinIO, Airflow, Temporal, Qdrant, Dify, n8n, Postgres, Redis)
+- [x] Backstage: standalone deploy + seed 7 catalog entities (`catalog-info.yaml` per entity)
+- [x] Apache Camel: project init + 4 route skeletons (SAP, MQTT, SharePoint, SAP PM stub)
 - [ ] Temporal: `temporal server start-dev` verified, `CBMWorkflow` skeleton defined
 
 ### Day 2 — Medallion Pipeline
-- [ ] Camel SAP extraction route: CSV → Bronze MinIO bucket, end-to-end tested
-- [ ] Airflow DAGs: ingest (Camel-triggered), transform (dbt), curate (quality checks)
-- [ ] dbt models: Bronze → Silver → Gold (`production_cost`, `inventory`, `quality` tables)
-- [ ] Marquez lineage: OpenLineage wired into Airflow + dbt, lineage visible in UI
-- [ ] Great Expectations: 3 DQ checks per layer (nulls, schema, range)
+- [x] Camel SAP extraction route: CSV → Bronze MinIO bucket, end-to-end tested
+- [x] Airflow DAGs: ingest (Camel-triggered), transform (dbt), curate (quality checks)
+- [x] dbt models: Bronze → Silver → Gold (`production_cost`, `inventory`, `quality` tables)
+- [x] Marquez lineage: OpenLineage wired into Airflow + dbt, lineage visible in UI
+- [x] Great Expectations: 3 DQ checks per layer (nulls, schema, range) — implemented as dbt schema tests
 
 ### Day 3 — OT/CBM Streaming + Temporal
 - [ ] MQTT publisher: 5 synthetic PLC tags publishing at 1Hz
@@ -608,10 +608,10 @@ services:
 - [ ] Anomaly injection button: fires test event, Temporal workflow visible in UI
 
 ### Day 4 — RAG Pipeline
-- [ ] Camel file watcher: drop PDF → triggers Unstructured parsing → BGE-M3 embeddings → Qdrant
-- [ ] Hybrid retrieval: Qdrant dense + BM25 sparse + RRF fusion — tested with 5 sample queries
-- [ ] Synthetic document corpus: 20 JSL-like docs (grade specs 304/316L/430, SOPs, manuals)
-- [ ] LlamaIndex RAG endpoint: FastAPI `/rag/query` with citations in response
+- [x] Camel file watcher: drop PDF → triggers Unstructured parsing → BGE-M3 embeddings → Qdrant
+- [x] Hybrid retrieval: Qdrant dense + BM25 sparse + RRF fusion — tested with 5 sample queries
+- [x] Synthetic document corpus: 20 JSL-like docs (grade specs 304/316L/430, SOPs, manuals)
+- [x] LlamaIndex RAG endpoint: FastAPI `/rag/query` with citations in response
 
 ### Day 5 — Dify + n8n + Agent Layer
 - [ ] Dify: 3 agent templates created (Inventory, Quality Monitor, Cost Analyst)
