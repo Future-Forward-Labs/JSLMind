@@ -1,0 +1,17 @@
+name: 'jslmind'
+version: '1.0.0'
+config-version: 2
+
+profile: 'jslmind'
+
+model-paths: ["models"]
+test-paths: ["tests"]
+
+models:
+  jslmind:
+    staging:
+      +schema: silver
+      +materialized: table
+    gold:
+      +schema: gold
+      +materialized: table

@@ -1,0 +1,7 @@
+jslmind:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /opt/airflow/medallion/jslmind.duckdb
+      threads: 4
