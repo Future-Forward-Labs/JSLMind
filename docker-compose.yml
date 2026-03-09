@@ -273,13 +273,19 @@ services:
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      RAG_INGEST_URL: http://rag-service:8001/ingest
+      RAG_WATCH_DIR: /docs/incoming
       SPRING_PROFILES_ACTIVE: demo
+    volumes:
+      - ./rag/docs:/docs          # shared with rag-service; Camel watches /docs/incoming
     ports:
       - "8090:8080"
     networks: [jslmind]
     depends_on:
       minio:
         condition: service_healthy
+      rag-service:
+        condition: service_started
     restart: unless-stopped
 
 # ─── Phase 5: OT/CBM Streaming ───────────────────────────────────────────────
