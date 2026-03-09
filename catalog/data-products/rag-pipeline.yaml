@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: rag-pipeline
+  description: >
+    Hybrid RAG pipeline on JSL documents — SOPs, grade specifications, and
+    maintenance manuals. Supports dense (BGE-M3/Qdrant) + sparse (BM25) retrieval
+    fused via Reciprocal Rank Fusion. Exposes POST /rag/query through Kong.
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    demo/ui: "RAG Pipeline — query JSL docs with hybrid retrieval and source citations"
+    demo/wow: "Drop a new PDF into rag/docs/incoming/ — Camel auto-indexes it in <20s"
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-team
+  system: jslmind-platform
+  providesApis:
+    - rag-query-api

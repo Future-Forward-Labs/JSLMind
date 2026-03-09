@@ -15,3 +15,4 @@ spec:
     - ./agents/quality-agent.yaml
     - ./integrations/sap-mm-connector.yaml
     - ./integrations/kepware-opc-connector.yaml
+    - ./data-products/rag-pipeline.yaml
