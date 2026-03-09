@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# verify-phase4.sh — Phase 4: Hybrid RAG smoke tests
-# Usage: ./scripts/verify-phase4.sh
+# verify-phase6.sh — Phase 4: Hybrid RAG smoke tests
+# Usage: ./scripts/verify-phase6.sh
 # Prerequisite: docker compose up rag-service qdrant camel-integration litellm-proxy
 
 set -euo pipefail

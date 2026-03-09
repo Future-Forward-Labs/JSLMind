@@ -275,7 +275,7 @@ Open http://localhost:7007/catalog to browse the UI. Click **"Enter as Guest"** 
 
 ```bash
 # Run full verification (11 checks end-to-end)
-bash scripts/verify-phase4.sh
+bash scripts/verify-phase6.sh
 
 # Direct query — RAG service
 curl -s -X POST http://localhost:8001/query \

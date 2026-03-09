@@ -15,10 +15,10 @@
 | 4 — Hybrid Retriever (RRF Fusion) | ✅ Done |
 | 5 — Combined FastAPI App | ✅ Done |
 | 6 — RAG Service Docker Build | ✅ Done |
-| 7 — Camel FileToQdrantRoute | ⏳ TODO |
-| 8 — Docker Compose volume update | ⏳ TODO |
-| 9 — Backstage Catalog Entity | ⏳ TODO |
-| 10 — Verification Script | ⏳ TODO |
+| 7 — Camel FileToQdrantRoute | ✅ Done |
+| 8 — Docker Compose volume update | ✅ Done |
+| 9 — Backstage Catalog Entity | ✅ Done |
+| 10 — Verification Script | ✅ Done |
 
 ---
 
@@ -149,7 +149,7 @@ spec:
 
 ## Task 10: Verification Script
 
-**Goal:** `scripts/verify-phase4.sh` with 10 end-to-end checks.
+**Goal:** `scripts/verify-phase6.sh` with 10 end-to-end checks.
 
 **Full script code** is in `docs/plans/2026-03-08-phase4-hybrid-rag.md` Task 10.
 
@@ -166,9 +166,9 @@ Checks:
 10. Backstage shows `rag-pipeline` entity
 11. Live drop test (drag file → indexed in 8s)
 
-**Make executable:** `chmod +x scripts/verify-phase4.sh`
+**Make executable:** `chmod +x scripts/verify-phase6.sh`
 
-**Commit:** `test: add verify-phase4 script for Hybrid RAG end-to-end checks`
+**Commit:** `test: add verify-phase6 script for Hybrid RAG end-to-end checks`
 
 ---
 
