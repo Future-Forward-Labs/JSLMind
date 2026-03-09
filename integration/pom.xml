@@ -46,7 +46,13 @@
       <version>${camel.version}</version>
     </dependency>
 
-    <!-- Spring Boot web for actuator/health -->
+    <!-- Spring Boot web server (needed for actuator HTTP endpoints) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <!-- Actuator: /actuator/health, /actuator/camel -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>

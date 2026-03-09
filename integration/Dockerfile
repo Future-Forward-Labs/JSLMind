@@ -1,12 +1,8 @@
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /build
-COPY pom.xml .
-RUN mvn dependency:go-offline -q
-COPY src ./src
-RUN mvn package -DskipTests -q
-
+# Pre-built JAR approach: build with `mvn package -DskipTests` on the host first,
+# then COPY the JAR into the image. This avoids Maven pulling deps through the
+# corporate proxy (Netskope) inside the Docker build layer.
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
-COPY --from=build /build/target/*.jar app.jar
+COPY target/jslmind-integration-*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
