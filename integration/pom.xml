@@ -46,6 +46,13 @@
       <version>${camel.version}</version>
     </dependency>
 
+    <!-- MinIO S3-compatible object storage (Bronze bucket writes) -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-minio-starter</artifactId>
+      <version>${camel.version}</version>
+    </dependency>
+
     <!-- Spring Boot web server (needed for actuator HTTP endpoints) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
