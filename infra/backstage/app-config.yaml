@@ -8,7 +8,9 @@ app:
 backend:
   baseUrl: http://localhost:7007
   cors:
-    origin: http://localhost:7007
+    origin:
+      - http://localhost:7007
+      - http://localhost:3000
   auth:
     dangerouslyDisableDefaultAuthPolicy: true  # Demo only — enable auth policy in production
 
