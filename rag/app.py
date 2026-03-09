@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional, Dict
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 
@@ -83,6 +84,13 @@ def _get_retriever() -> HybridRetriever:
 
 
 app = FastAPI(title="JSLMind RAG Service", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class IngestRequest(BaseModel):
