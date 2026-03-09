@@ -140,9 +140,17 @@ bash scripts/seed-litellm-keys.sh       # generates per-team virtual keys
 docker compose up -d backstage
 
 # ── Phase 4 — Medallion Pipeline ──────────────────────────────────────────────
-docker compose up -d minio camel-integration airflow-webserver airflow-scheduler marquez
-bash scripts/seed-minio.sh
-bash scripts/seed-sap-data.sh
+docker compose up -d minio airflow-init
+# Wait ~30s for airflow-init to run DB migration
+sleep 30
+docker compose up -d airflow-webserver airflow-scheduler marquez camel-integration
+bash scripts/seed-minio.sh          # create bronze/silver/gold/platinum buckets
+bash scripts/seed-sap-data.sh       # upload initial SAP batch to bronze bucket
+# Unpause all 3 DAGs (first time only)
+for dag in sap_ingest medallion_transform data_quality; do
+  curl -sf -X PATCH -u admin:admin -H "Content-Type: application/json" \
+    -d '{"is_paused": false}' "http://localhost:8085/api/v1/dags/${dag}"
+done
 
 # ── Phase 5 — OT/CBM Streaming ────────────────────────────────────────────────
 docker compose up -d redpanda temporal temporal-ui timescaledb mosquitto mqtt-simulator pyflink-anomaly cbm-worker
