@@ -14,6 +14,7 @@ volumes:
   qdrant_data:
   minio_data:
   airflow_logs:
+  medallion_data:
 
 networks:
   jslmind:
@@ -211,9 +212,16 @@ services:
       retries: 5
     restart: unless-stopped
 
-  airflow-webserver:
+  airflow-init:
     image: apache/airflow:2.9.0
-    command: webserver
+    command: >
+      bash -c "
+        airflow db migrate &&
+        airflow users create
+          --username admin --password admin
+          --firstname Admin --lastname JSL
+          --role Admin --email admin@jsl.com || true
+      "
     environment: &airflow-env
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:${POSTGRES_PASSWORD}@postgres:5432/airflow
@@ -222,16 +230,33 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       OPENLINEAGE_URL: http://marquez:5000
       OPENLINEAGE_NAMESPACE: jslmind
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      _PIP_ADDITIONAL_REQUIREMENTS: "dbt-duckdb==1.8.1 minio==7.2.0 pandas==2.2.0 pyarrow==15.0.0"
+    networks: [jslmind]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  airflow-webserver:
+    image: apache/airflow:2.9.0
+    command: webserver
+    environment: *airflow-env
     volumes:
       - ./data-platform/dags:/opt/airflow/dags:ro
       - ./data-platform/dbt:/opt/airflow/dbt:ro
       - airflow_logs:/opt/airflow/logs
+      - medallion_data:/opt/airflow/medallion
     ports:
       - "8085:8080"
     networks: [jslmind]
     depends_on:
       postgres:
         condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   airflow-scheduler:
@@ -242,6 +267,7 @@ services:
       - ./data-platform/dags:/opt/airflow/dags:ro
       - ./data-platform/dbt:/opt/airflow/dbt:ro
       - airflow_logs:/opt/airflow/logs
+      - medallion_data:/opt/airflow/medallion
     networks: [jslmind]
     depends_on:
       postgres:
