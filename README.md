@@ -147,8 +147,13 @@ bash scripts/seed-sap-data.sh
 docker compose up -d redpanda temporal temporal-ui timescaledb mosquitto mqtt-simulator pyflink-anomaly cbm-worker
 
 # ── Phase 6 — Hybrid RAG ──────────────────────────────────────────────────────
-docker compose up -d qdrant rag-service
-bash scripts/seed-qdrant.sh
+# Prereq 1: place Netskope CA bundle at rag/netskope-ca-bundle.pem (gitignored)
+# Prereq 2: build Camel JAR on host (Maven can't pull deps through Docker proxy)
+cd integration && JAVA_HOME=$(/usr/libexec/java_home) mvn package -DskipTests -q && cd ..
+# Prereq 3: generate the 20-doc synthetic corpus (one-time)
+python rag/docs/generate_corpus.py
+# Start services — rag-service auto-seeds Qdrant from corpus/ on startup
+docker compose up -d qdrant rag-service camel-integration kong
 
 # ── Phase 7 — Agent Builder ───────────────────────────────────────────────────
 docker compose up -d dify dify-web dify-worker n8n langgraph-service
@@ -206,6 +211,45 @@ python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().
 # paste output as AIRFLOW_FERNET_KEY in .env
 ```
 
+### Phase 6 — Hybrid RAG
+
+**1. Netskope CA cert** — the `rag-service` Docker build runs `pip install` inside the container. Export the two Netskope certs from your System Keychain and save them as a combined PEM bundle:
+```bash
+# macOS — export Netskope certs (adjust cert names to match your keychain)
+security find-certificate -a -p /Library/Keychains/System.keychain \
+  | python3 -c "
+import sys, re, subprocess
+certs = re.findall(r'-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', sys.stdin.read(), re.DOTALL)
+for c in certs:
+    r = subprocess.run(['openssl','x509','-subject','-noout'], input=c.encode(), capture_output=True)
+    if 'netskope' in r.stdout.decode().lower() or 'goskope' in r.stdout.decode().lower():
+        print(c)
+" > rag/netskope-ca-bundle.pem
+```
+The file is gitignored. Re-run this whenever the cert is rotated.
+
+**2. Build Camel JAR on host** — Maven can't resolve dependencies through the Netskope proxy inside Docker. Build locally first; the Dockerfile copies the pre-built JAR:
+```bash
+cd integration
+JAVA_HOME=$(/usr/libexec/java_home) mvn package -DskipTests -q
+cd ..
+```
+Re-run after any `integration/` code change before rebuilding the Docker image.
+
+**3. Generate corpus** — creates 20 synthetic JSL documents in `rag/docs/corpus/` (one-time):
+```bash
+pip install reportlab python-docx   # local deps, not needed in container
+python rag/docs/generate_corpus.py
+# Expected: 20 files in rag/docs/corpus/
+```
+
+**4. Startup** — `rag-service` auto-seeds Qdrant from `corpus/` on container start. No separate seed script needed:
+```bash
+docker compose up -d qdrant rag-service camel-integration kong
+# Wait ~2–3 min for corpus embedding (20 docs × multiple chunks × BGE-M3)
+docker compose logs -f rag-service   # wait for "Application startup complete"
+```
+
 ---
 
 ## Testing Phase 3 — Backstage Catalog
@@ -224,6 +268,51 @@ curl -s "http://localhost:7007/api/catalog/entities" \
 ```
 
 Open http://localhost:7007/catalog to browse the UI. Click **"Enter as Guest"** when prompted.
+
+---
+
+## Testing Phase 6 — Hybrid RAG
+
+```bash
+# Run full verification (11 checks end-to-end)
+bash scripts/verify-phase4.sh
+
+# Direct query — RAG service
+curl -s -X POST http://localhost:8001/query \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "Max carbon content for Grade 316L?", "top_k": 3}' \
+  | python3 -m json.tool
+
+# Query with grade filter
+curl -s -X POST http://localhost:8001/query \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "surface finish requirements", "filters": {"grade": "304"}, "top_k": 2}' \
+  | python3 -m json.tool
+
+# Via Kong gateway
+curl -s -X POST http://localhost:8000/rag/query \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "pickling line maintenance schedule"}' \
+  | python3 -m json.tool
+
+# Camel route health
+curl -s http://localhost:8090/actuator/health | python3 -m json.tool
+
+# Qdrant collection stats
+curl -s http://localhost:6333/collections/jsl_docs \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); print('points:', d['result']['points_count'])"
+
+# Live doc drop demo (WOW moment) — file auto-indexed in <20s
+echo "JSL Demo: Grade 316L max carbon 0.03%, chromium 16-18%, molybdenum 2-3%." \
+  > rag/docs/incoming/demo_drop.txt
+sleep 15
+curl -s -X POST http://localhost:8001/query \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "what document was just added?"}' | python3 -m json.tool
+rm rag/docs/incoming/demo_drop.txt
+```
+
+Open http://localhost:6333/dashboard to browse the Qdrant vector collection.
 
 ---
 
@@ -275,6 +364,13 @@ Check traces at http://localhost:3002 (Langfuse) after any query.
 | **Port conflict** | Change the host port in `docker-compose.yml` (e.g. `8090:8080` instead of `8080:8080`) |
 | **Grafana password out of sync** | Password set in UI persists in the `grafana_data` volume — update `.env` `GRAFANA_ADMIN_PASSWORD` to match |
 | **Reset everything** | `docker compose down -v` (destroys all volumes) then start fresh |
+| **rag-service build: SSL cert error** | `rag/netskope-ca-bundle.pem` missing — re-export from System Keychain (see Phase 6 setup above) |
+| **rag-service build: PEM not found** | `rag/.dockerignore` must have `!netskope-ca-bundle.pem` exception — already set in repo |
+| **camel-integration build: Maven SSL error** | Build JAR on host first: `cd integration && mvn package -DskipTests -q` |
+| **Camel actuator empty reply (port 8090)** | `spring-boot-starter-web` missing from pom.xml — already fixed; rebuild: `docker compose up -d --build camel-integration` |
+| **Qdrant empty / no vectors after startup** | corpus not generated — run `python rag/docs/generate_corpus.py` then restart `rag-service` |
+| **rag-service still seeding (uvicorn not up)** | Wait 2–3 min — BGE-M3 embeds each chunk via LiteLLM. Watch: `docker compose logs -f rag-service` |
+| **Kong /rag/query 404** | Kong not started — `docker compose up -d kong` |
 
 ---
 
