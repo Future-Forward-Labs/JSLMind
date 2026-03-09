@@ -60,26 +60,83 @@ def _extract_text_plain(file_path: str) -> List[Dict]:
     ]
 
 
-def _extract_with_unstructured(file_path: str) -> List[Dict]:
-    from unstructured.partition.auto import partition
-    elements = partition(filename=file_path)
+def _extract_pdf(file_path: str) -> List[Dict]:
+    """Extract text from PDF using pdfminer (no OpenCV/libGL dependency)."""
+    from pdfminer.high_level import extract_text_to_fp, extract_pages
+    from pdfminer.layout import LTTextContainer
+    import io
+
     doc_name = Path(file_path).name
     chunks = []
-    current_section = "Introduction"
-    current_page = 1
 
-    for el in elements:
-        el_type = type(el).__name__
-        text = str(el).strip()
-        if not text:
+    # pdfminer layout gives one LTTextContainer per text box — treat each as a chunk,
+    # grouping short consecutive boxes (headings) with the following body text.
+    for page_num, page_layout in enumerate(extract_pages(file_path), start=1):
+        current_section = f"page-{page_num}"
+        pending = []  # accumulate short heading-like blocks
+
+        for element in page_layout:
+            if not isinstance(element, LTTextContainer):
+                continue
+            text = element.get_text().strip()
+            if not text:
+                continue
+
+            # Short block (<60 chars, no punctuation end) → treat as section heading
+            if len(text) < 60 and not text[-1] in ".,:;":
+                if pending:
+                    # flush previous accumulated text as a chunk
+                    body = " ".join(pending)
+                    if len(body) >= 20:
+                        chunks.append({
+                            "text": body,
+                            "metadata": {
+                                "doc_name": doc_name,
+                                "grade": _infer_grade(doc_name),
+                                "doc_type": _infer_doc_type(doc_name),
+                                "section": current_section,
+                                "page": page_num,
+                            },
+                        })
+                    pending = []
+                current_section = text[:80]
+            else:
+                pending.append(text)
+
+        # flush remaining
+        if pending:
+            body = " ".join(pending)
+            if len(body) >= 20:
+                chunks.append({
+                    "text": body,
+                    "metadata": {
+                        "doc_name": doc_name,
+                        "grade": _infer_grade(doc_name),
+                        "doc_type": _infer_doc_type(doc_name),
+                        "section": current_section,
+                        "page": page_num,
+                    },
+                })
+
+    return chunks if chunks else _extract_text_plain(file_path)
+
+
+def _extract_docx(file_path: str) -> List[Dict]:
+    """Extract text from DOCX using python-docx (no OpenCV/libGL dependency)."""
+    from docx import Document
+
+    doc_name = Path(file_path).name
+    doc = Document(file_path)
+    chunks = []
+    current_section = "Introduction"
+
+    for para in doc.paragraphs:
+        text = para.text.strip()
+        if not text or len(text) < 20:
             continue
-        if el_type in ("Title", "Header"):
+        # Headings become section labels
+        if para.style.name.startswith("Heading"):
             current_section = text[:80]
-        if hasattr(el, "metadata") and hasattr(el.metadata, "page_number"):
-            pg = el.metadata.page_number
-            if pg:
-                current_page = pg
-        if len(text) < 20:
             continue
         chunks.append({
             "text": text,
@@ -88,18 +145,41 @@ def _extract_with_unstructured(file_path: str) -> List[Dict]:
                 "grade": _infer_grade(doc_name),
                 "doc_type": _infer_doc_type(doc_name),
                 "section": current_section,
-                "page": current_page,
+                "page": 1,
             },
         })
+
+    # Also extract table cell text
+    for table in doc.tables:
+        for row in table.rows:
+            row_text = " | ".join(
+                cell.text.strip() for cell in row.cells if cell.text.strip()
+            )
+            if len(row_text) >= 20:
+                chunks.append({
+                    "text": row_text,
+                    "metadata": {
+                        "doc_name": doc_name,
+                        "grade": _infer_grade(doc_name),
+                        "doc_type": _infer_doc_type(doc_name),
+                        "section": current_section,
+                        "page": 1,
+                    },
+                })
 
     return chunks if chunks else _extract_text_plain(file_path)
 
 
 def extract_chunks(file_path: str) -> List[Dict]:
     suffix = Path(file_path).suffix.lower()
-    if suffix in (".pdf", ".docx", ".xlsx", ".doc"):
+    if suffix == ".pdf":
         try:
-            return _extract_with_unstructured(file_path)
+            return _extract_pdf(file_path)
+        except Exception:
+            pass
+    elif suffix in (".docx", ".doc"):
+        try:
+            return _extract_docx(file_path)
         except Exception:
             pass
     return _extract_text_plain(file_path)
