@@ -44,9 +44,13 @@ function useAirflowDags() {
 function useMinioHealth() {
   const [status, setStatus] = useState('checking')
   useEffect(() => {
-    fetch('http://localhost:9000/minio/health/live')
-      .then(() => setStatus('live'))
-      .catch(() => setStatus('offline'))
+    const check = () =>
+      fetch('http://localhost:9000/minio/health/live')
+        .then(() => setStatus('live'))
+        .catch(() => setStatus('offline'))
+    check()
+    const t = setInterval(check, 30000)
+    return () => clearInterval(t)
   }, [])
   return status
 }
