@@ -5,7 +5,7 @@ const ACTIVE_PILLARS = [
   { to: '/rag',       label: 'Hybrid RAG',        icon: '◈' },
   { to: '/catalog',   label: 'Agent Catalog',     icon: '◉' },
   { to: '/observe',   label: 'Observability',     icon: '◎' },
-  { to: '/medallion', label: 'Medallion Pipeline', icon: '◈' },
+  { to: '/medallion', label: 'Medallion Pipeline', icon: '⬟' },
 ]
 
 const COMING_SOON = [
