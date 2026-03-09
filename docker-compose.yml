@@ -541,17 +541,11 @@ services:
     networks: [jslmind]
     restart: unless-stopped
 
-  react-frontend:
+  frontend:
     build:
       context: ./frontend
-    environment:
-      REACT_APP_BACKEND_URL: http://localhost:8003
-      REACT_APP_TEMPORAL_UI: http://localhost:8088
-      REACT_APP_LANGFUSE_URL: http://localhost:3002
-      REACT_APP_BACKSTAGE_URL: http://localhost:7007
-      REACT_APP_MARQUEZ_URL: http://localhost:5000
+      dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3000:80"
     networks: [jslmind]
-    depends_on: [fastapi-backend]
     restart: unless-stopped
