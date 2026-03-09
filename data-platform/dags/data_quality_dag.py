@@ -21,13 +21,15 @@ def check_gold_counts(**context):
 
     conn = duckdb.connect("/opt/airflow/medallion/jslmind.duckdb", read_only=True)
     results = {}
-    for table in ("gold.production_cost", "gold.inventory", "gold.quality"):
-        try:
-            count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            results[table] = {"count": count, "status": "PASS" if count > 0 else "WARN"}
-        except Exception as exc:
-            results[table] = {"count": 0, "status": "FAIL", "error": str(exc)}
-    conn.close()
+    try:
+        for table in ("gold.production_cost", "gold.inventory", "gold.quality"):
+            try:
+                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                results[table] = {"count": count, "status": "PASS" if count > 0 else "WARN"}
+            except Exception as exc:
+                results[table] = {"count": 0, "status": "FAIL", "error": str(exc)}
+    finally:
+        conn.close()
 
     logging.info(f"Gold DQ results: {results}")
     failures = [k for k, v in results.items() if v["status"] == "FAIL"]

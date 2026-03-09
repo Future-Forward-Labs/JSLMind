@@ -59,8 +59,8 @@ def ingest_bronze_from_minio(**context):
         endpoint = os.environ.get("MINIO_ENDPOINT", "minio:9000").replace("http://", "").replace("https://", "")
         client = Minio(
             endpoint,
-            access_key=os.environ.get("MINIO_ACCESS_KEY", "jslmind"),
-            secret_key=os.environ.get("MINIO_SECRET_KEY", "jslmind_minio_2024"),
+            access_key=os.environ["MINIO_ACCESS_KEY"],
+            secret_key=os.environ["MINIO_SECRET_KEY"],
             secure=False,
         )
         objects = list(client.list_objects("bronze-sap-mm"))
