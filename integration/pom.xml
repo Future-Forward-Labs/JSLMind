@@ -65,6 +65,39 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
 
+    <!-- MQTT ingestion (OT/CBM) -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-paho-mqtt5-starter</artifactId>
+      <version>${camel.version}</version>
+    </dependency>
+
+    <!-- RedPanda/Kafka producer (Camel route) -->
+    <dependency>
+      <groupId>org.apache.camel.springboot</groupId>
+      <artifactId>camel-kafka-starter</artifactId>
+      <version>${camel.version}</version>
+    </dependency>
+
+    <!-- Kafka Streams (anomaly processor) -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-streams</artifactId>
+    </dependency>
+
+    <!-- Spring Kafka (@KafkaListener for TimescaleDB writer) -->
+    <dependency>
+      <groupId>org.springframework.kafka</groupId>
+      <artifactId>spring-kafka</artifactId>
+    </dependency>
+
+    <!-- PostgreSQL JDBC (TimescaleDB writes) -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- Test -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
