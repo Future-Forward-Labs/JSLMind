@@ -4,14 +4,19 @@ Endpoints:
   GET  /health        — liveness probe
   POST /ingest        — called by Camel on new file drop
   POST /query         — hybrid RAG query (exposed via Kong at /rag/query)
+  GET  /ot/latest     — most recent sensor reading per (equipment_id, tag)
+  WS   /ot/alerts     — WebSocket: push anomaly alerts to connected clients
+  POST /ot/alert      — called by Kafka Streams processor on anomaly detection
 """
 
+import asyncio
 import os
 import logging
 from pathlib import Path
 from typing import Optional, Dict
 
-from fastapi import FastAPI, HTTPException
+import psycopg2
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
@@ -24,6 +29,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://qdrant:6333")
+TSDB_DSN   = os.environ.get("TIMESCALEDB_DSN",
+    "host=timescaledb port=5432 dbname=sensors user=postgres password=postgres")
 LITELLM_BASE_URL = os.environ.get("LITELLM_BASE_URL", "http://litellm-proxy:4000")
 LITELLM_API_KEY = os.environ.get("LITELLM_API_KEY", "sk-jsl-master")
 EMBED_MODEL = os.environ.get("EMBED_MODEL", "jsl-embed")
@@ -122,3 +129,58 @@ def ingest(req: IngestRequest):
 def query(req: QueryRequest):
     logger.info(f"Query: {req.query!r} filters={req.filters}")
     return _get_retriever().query(req.query, filters=req.filters, top_k=req.top_k)
+
+
+# ── OT / CBM Streaming Endpoints ─────────────────────────────────────────────
+
+_alert_subscribers: list[WebSocket] = []
+
+
+@app.get("/ot/latest")
+def ot_latest():
+    """Most recent reading per (equipment_id, tag)."""
+    conn = psycopg2.connect(TSDB_DSN)
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT DISTINCT ON (equipment_id, tag)
+                equipment_id, tag, value, unit, time
+            FROM sensor_readings
+            ORDER BY equipment_id, tag, time DESC
+        """)
+        rows = cur.fetchall()
+    conn.close()
+    return {
+        f"{r[0]}|{r[1]}": {
+            "equipment_id": r[0],
+            "tag":          r[1],
+            "value":        r[2],
+            "unit":         r[3],
+            "timestamp":    r[4].isoformat(),
+        }
+        for r in rows
+    }
+
+
+@app.websocket("/ot/alerts")
+async def ot_alerts_ws(ws: WebSocket):
+    await ws.accept()
+    _alert_subscribers.append(ws)
+    try:
+        while True:
+            await asyncio.sleep(30)
+    except WebSocketDisconnect:
+        _alert_subscribers.remove(ws)
+
+
+@app.post("/ot/alert")
+async def receive_alert(alert: dict):
+    """Kafka Streams processor POSTs here on anomaly detection."""
+    dead = []
+    for ws in _alert_subscribers:
+        try:
+            await ws.send_json(alert)
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        _alert_subscribers.remove(ws)
+    return {"status": "broadcast", "subscribers": len(_alert_subscribers)}

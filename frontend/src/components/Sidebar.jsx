@@ -1,16 +1,16 @@
 import { NavLink } from 'react-router-dom'
 
 const ACTIVE_PILLARS = [
-  { to: '/',          label: 'Overview',          icon: '⬡' },
-  { to: '/rag',       label: 'Hybrid RAG',        icon: '◈' },
-  { to: '/catalog',   label: 'Agent Catalog',     icon: '◉' },
-  { to: '/observe',   label: 'Observability',     icon: '◎' },
+  { to: '/',          label: 'Overview',           icon: '⬡' },
+  { to: '/ot',        label: 'OT / CBM',           icon: '◈' },
+  { to: '/rag',       label: 'Hybrid RAG',         icon: '◈' },
+  { to: '/catalog',   label: 'Agent Catalog',      icon: '◉' },
+  { to: '/observe',   label: 'Observability',      icon: '◎' },
   { to: '/medallion', label: 'Medallion Pipeline', icon: '⬟' },
 ]
 
 const COMING_SOON = [
-  { label: 'OT / CBM Streaming', phase: 5 },
-  { label: 'Agent Builder',      phase: 7 },
+  { label: 'Agent Builder', phase: 7 },
 ]
 
 const linkClass = ({ isActive }) =>

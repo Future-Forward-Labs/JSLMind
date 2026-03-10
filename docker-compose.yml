@@ -15,6 +15,7 @@ volumes:
   minio_data:
   airflow_logs:
   medallion_data:
+  timescaledb_data:
 
 networks:
   jslmind:
@@ -302,6 +303,9 @@ services:
       RAG_INGEST_URL: http://rag-service:8001/ingest
       RAG_WATCH_DIR: /docs/incoming
       SPRING_PROFILES_ACTIVE: demo
+      TIMESCALEDB_HOST: timescaledb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TEMPORAL_ADDRESS: temporal:7233
     volumes:
       - ./rag/docs:/docs          # shared with rag-service; Camel watches /docs/incoming
     ports:
@@ -312,6 +316,8 @@ services:
         condition: service_healthy
       rag-service:
         condition: service_started
+      timescaledb:
+        condition: service_healthy
     restart: unless-stopped
 
 # ─── Phase 5: OT/CBM Streaming ───────────────────────────────────────────────
@@ -367,9 +373,17 @@ services:
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: sensors
+    volumes:
+      - ./infra/timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - timescaledb_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     networks: [jslmind]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sensors"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   mosquitto:
@@ -442,6 +456,7 @@ services:
       DOC_WATCH_DIR: /docs/incoming
       LANGFUSE_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY}
       LANGFUSE_SECRET_KEY: ${LANGFUSE_SECRET_KEY}
+      TIMESCALEDB_DSN: host=timescaledb port=5432 dbname=sensors user=postgres password=${POSTGRES_PASSWORD}
     volumes:
       - ./rag/docs:/docs
     ports:

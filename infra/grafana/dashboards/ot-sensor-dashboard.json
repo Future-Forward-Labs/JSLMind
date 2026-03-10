@@ -1,0 +1,171 @@
+{
+  "title": "JSL Plant OT — Live Sensor Monitoring",
+  "uid": "jsl-ot-sensors",
+  "tags": ["jsl", "ot", "cbm"],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "time": {"from": "now-15m", "to": "now"},
+  "templating": {
+    "list": [
+      {
+        "name": "equipment",
+        "type": "query",
+        "datasource": {"uid": "timescaledb-uid"},
+        "query": "SELECT DISTINCT equipment_id FROM sensor_readings ORDER BY 1",
+        "multi": true,
+        "includeAll": true,
+        "current": {"text": "All", "value": "$__all"}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "CRM-1 — Bearing Temperature (°C)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, value FROM sensor_readings WHERE equipment_id = 'CRM-1' AND tag = 'bearing_temp_degC' AND $__timeFilter(time) ORDER BY time",
+        "format": "time_series"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "color": {"mode": "palette-classic"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "green"},
+              {"value": 75, "color": "yellow"},
+              {"value": 85, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "CRM-1 — Vibration (mm/s)",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, value FROM sensor_readings WHERE equipment_id = 'CRM-1' AND tag = 'vibration_mm_s' AND $__timeFilter(time) ORDER BY time",
+        "format": "time_series"
+      }],
+      "fieldConfig": {"defaults": {"unit": "velocityms"}}
+    },
+    {
+      "id": 3,
+      "title": "CRM-1 — Motor Current (A)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 8, "w": 8, "h": 8},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, value FROM sensor_readings WHERE equipment_id = 'CRM-1' AND tag = 'motor_current_amp' AND $__timeFilter(time) ORDER BY time",
+        "format": "time_series"
+      }],
+      "fieldConfig": {"defaults": {"unit": "amp"}}
+    },
+    {
+      "id": 4,
+      "title": "APL-1 — Furnace Temperature (°C)",
+      "type": "timeseries",
+      "gridPos": {"x": 8, "y": 8, "w": 8, "h": 8},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, value FROM sensor_readings WHERE equipment_id = 'APL-1' AND tag = 'furnace_temp_degC' AND $__timeFilter(time) ORDER BY time",
+        "format": "time_series"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "red"},
+              {"value": 1000, "color": "green"},
+              {"value": 1090, "color": "yellow"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "APL-1 — HNO₃ Concentration (%)",
+      "type": "timeseries",
+      "gridPos": {"x": 16, "y": 8, "w": 8, "h": 8},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, value FROM sensor_readings WHERE equipment_id = 'APL-1' AND tag = 'hno3_concentration_pct' AND $__timeFilter(time) ORDER BY time",
+        "format": "time_series"
+      }],
+      "fieldConfig": {"defaults": {"unit": "percent"}}
+    },
+    {
+      "id": 6,
+      "title": "CCM-1 — Mold Level (mm)",
+      "type": "timeseries",
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, value FROM sensor_readings WHERE equipment_id = 'CCM-1' AND tag = 'mold_level_mm' AND $__timeFilter(time) ORDER BY time",
+        "format": "time_series"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lengthmm",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": null, "color": "red"},
+              {"value": 100, "color": "green"},
+              {"value": 120, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "CCM-1 — Tundish Temperature (°C)",
+      "type": "timeseries",
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, value FROM sensor_readings WHERE equipment_id = 'CCM-1' AND tag = 'tundish_temp_degC' AND $__timeFilter(time) ORDER BY time",
+        "format": "time_series"
+      }],
+      "fieldConfig": {"defaults": {"unit": "celsius"}}
+    },
+    {
+      "id": 8,
+      "title": "Anomaly Events (last 1 hour)",
+      "type": "table",
+      "gridPos": {"x": 0, "y": 24, "w": 24, "h": 7},
+      "datasource": {"uid": "timescaledb-uid"},
+      "targets": [{
+        "rawSql": "SELECT time, equipment_id, tag, round(value::numeric,2) as value, round(z_score::numeric,2) as z_score, round(mean_val::numeric,2) as mean, workflow_id FROM anomaly_events WHERE $__timeFilter(time) ORDER BY time DESC LIMIT 50",
+        "format": "table"
+      }],
+      "fieldConfig": {
+        "overrides": [{
+          "matcher": {"id": "byName", "options": "z_score"},
+          "properties": [
+            {"id": "thresholds", "value": {
+              "mode": "absolute",
+              "steps": [
+                {"value": null, "color": "green"},
+                {"value": 3, "color": "yellow"},
+                {"value": 5, "color": "red"}
+              ]
+            }},
+            {"id": "custom.displayMode", "value": "color-background"}
+          ]
+        }]
+      }
+    }
+  ]
+}
