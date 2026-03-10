@@ -9,8 +9,12 @@ import io.temporal.worker.WorkerFactory;
 public class CBMWorker {
     public static void main(String[] args) throws InterruptedException {
         String address = System.getenv().getOrDefault("TEMPORAL_ADDRESS", "localhost:7233");
-        WorkflowServiceStubs service = WorkflowServiceStubs.newServiceStubs(
-            WorkflowServiceStubsOptions.newBuilder().setTarget(address).build()
+        WorkflowServiceStubsOptions options = WorkflowServiceStubsOptions.newBuilder()
+            .setTarget(address)
+            .build();
+        // newConnectedServiceStubs waits up to 30s for Temporal to be reachable
+        WorkflowServiceStubs service = WorkflowServiceStubs.newConnectedServiceStubs(
+            options, java.time.Duration.ofSeconds(30)
         );
         WorkflowClient client   = WorkflowClient.newInstance(service);
         WorkerFactory  factory  = WorkerFactory.newInstance(client);

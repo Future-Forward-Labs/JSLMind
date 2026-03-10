@@ -91,11 +91,32 @@
       <artifactId>spring-kafka</artifactId>
     </dependency>
 
+    <!-- Spring JDBC starter — brings in HikariCP connection pool -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+
     <!-- PostgreSQL JDBC (TimescaleDB writes) -->
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
       <scope>runtime</scope>
+    </dependency>
+
+    <!-- Temporal Java SDK (CBMWorkflow trigger from anomaly processor) -->
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-sdk</artifactId>
+      <version>1.24.1</version>
+    </dependency>
+
+    <!-- CBMWorkflow interface — needed at compile time and runtime to start the workflow.
+         Must be installed locally first: cd workflows && mvn install -DskipTests -->
+    <dependency>
+      <groupId>com.jslmind</groupId>
+      <artifactId>jslmind-workflows</artifactId>
+      <version>1.0.0</version>
     </dependency>
 
     <!-- Test -->

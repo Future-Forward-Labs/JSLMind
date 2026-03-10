@@ -21,31 +21,33 @@ EQUIPMENT = {
         "description": "Cold Rolling Mill #1",
         "line": "CR-LINE-1",
         "tags": {
-            "bearing_temp_degC":  {"mean": 55.0,  "std": 4.5,   "unit": "degC",  "anomaly": +22.0},
-            "vibration_mm_s":     {"mean": 2.5,   "std": 0.6,   "unit": "mm_s",  "anomaly": +7.5},
-            "motor_current_amp":  {"mean": 900.0, "std": 55.0,  "unit": "amp",   "anomaly": +280.0},
-            "rolling_force_kN":   {"mean": 10000.0,"std": 600.0,"unit": "kN",    "anomaly": +2200.0},
-            "strip_speed_mpm":    {"mean": 148.0, "std": 15.0,  "unit": "mpm",   "anomaly": 0.0},
+            # std tightened to realistic PID-controlled process tolerances.
+            # Anomaly offsets are 15-40x the std so injection creates Z≥15σ spikes.
+            "bearing_temp_degC":  {"mean": 55.0,    "std": 0.8,  "unit": "degC", "anomaly": +22.0},
+            "vibration_mm_s":     {"mean": 2.5,     "std": 0.12, "unit": "mm_s", "anomaly": +7.5},
+            "motor_current_amp":  {"mean": 900.0,   "std": 8.0,  "unit": "amp",  "anomaly": +280.0},
+            "rolling_force_kN":   {"mean": 10000.0, "std": 80.0, "unit": "kN",   "anomaly": +2200.0},
+            "strip_speed_mpm":    {"mean": 148.0,   "std": 1.2,  "unit": "mpm",  "anomaly": 0.0},
         },
     },
     "APL-1": {
         "description": "Annealing & Pickling Line #1",
         "line": "APL-LINE-1",
         "tags": {
-            "furnace_temp_degC":      {"mean": 1048.0, "std": 12.0, "unit": "degC", "anomaly": -60.0},
-            "hno3_concentration_pct": {"mean": 20.0,   "std": 1.2,  "unit": "pct",  "anomaly": -6.0},
-            "strip_speed_mpm":        {"mean": 35.0,   "std": 5.0,  "unit": "mpm",  "anomaly": 0.0},
-            "rinse_conductivity_us":  {"mean": 110.0,  "std": 28.0, "unit": "us_cm","anomaly": +400.0},
+            "furnace_temp_degC":      {"mean": 1048.0, "std": 2.5,  "unit": "degC",  "anomaly": -60.0},
+            "hno3_concentration_pct": {"mean": 20.0,   "std": 0.15, "unit": "pct",   "anomaly": -6.0},
+            "strip_speed_mpm":        {"mean": 35.0,   "std": 0.5,  "unit": "mpm",   "anomaly": 0.0},
+            "rinse_conductivity_us":  {"mean": 110.0,  "std": 4.0,  "unit": "us_cm", "anomaly": +400.0},
         },
     },
     "CCM-1": {
         "description": "Continuous Casting Machine #1",
         "line": "CAST-LINE-1",
         "tags": {
-            "mold_level_mm":           {"mean": 110.0,  "std": 3.5,  "unit": "mm",   "anomaly": +18.0},
-            "casting_speed_mpm":       {"mean": 1.10,   "std": 0.08, "unit": "mpm",  "anomaly": 0.0},
-            "mold_cooling_delta_degC": {"mean": 11.5,   "std": 1.5,  "unit": "degC", "anomaly": +9.0},
-            "tundish_temp_degC":       {"mean": 1545.0, "std": 8.0,  "unit": "degC", "anomaly": -25.0},
+            "mold_level_mm":           {"mean": 110.0,  "std": 0.6,   "unit": "mm",   "anomaly": +18.0},
+            "casting_speed_mpm":       {"mean": 1.10,   "std": 0.008, "unit": "mpm",  "anomaly": 0.0},
+            "mold_cooling_delta_degC": {"mean": 11.5,   "std": 0.25,  "unit": "degC", "anomaly": +9.0},
+            "tundish_temp_degC":       {"mean": 1545.0, "std": 1.5,   "unit": "degC", "anomaly": -25.0},
         },
     },
 }

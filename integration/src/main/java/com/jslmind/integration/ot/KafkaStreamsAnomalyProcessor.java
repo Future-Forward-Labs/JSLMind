@@ -6,8 +6,14 @@ import io.temporal.client.WorkflowOptions;
 import io.temporal.serviceclient.WorkflowServiceStubs;
 import io.temporal.serviceclient.WorkflowServiceStubsOptions;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,14 +27,16 @@ import java.sql.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Properties;
-import java.util.UUID;
 
 @Component
 public class KafkaStreamsAnomalyProcessor {
 
     private static final Logger log = LoggerFactory.getLogger(KafkaStreamsAnomalyProcessor.class);
-    private static final double Z_SCORE_THRESHOLD = 3.0;
-    private static final int MIN_SAMPLES = 10; // minimum window samples before scoring
+    // 5σ threshold: in a Gaussian distribution only 0.00006% of values exceed 5σ,
+    // making spontaneous false-positives effectively impossible while injected anomalies
+    // (which shift values by 15-40σ) are still detected with certainty.
+    private static final double Z_SCORE_THRESHOLD = 5.0;
+    private static final int MIN_SAMPLES = 10;
 
     private KafkaStreams streams;
 
@@ -59,7 +67,6 @@ public class KafkaStreamsAnomalyProcessor {
 
         StreamsBuilder builder = new StreamsBuilder();
 
-        // In-memory state store: key = "equipment_id|tag", value = AnomalyState
         builder.addStateStore(
             Stores.keyValueStoreBuilder(
                 Stores.inMemoryKeyValueStore("anomaly-state-store"),
@@ -71,6 +78,7 @@ public class KafkaStreamsAnomalyProcessor {
             )
         );
 
+        // Kafka Streams 3.x new Processor API — process(Record<K,V>) instead of process(K,V)
         builder.stream("plant.sensors", Consumed.with(Serdes.String(), Serdes.String()))
             .process(() -> new AnomalyDetectProcessor(), "anomaly-state-store");
 
@@ -84,22 +92,20 @@ public class KafkaStreamsAnomalyProcessor {
         if (streams != null) streams.close(Duration.ofSeconds(10));
     }
 
-    // ── Processor ─────────────────────────────────────────────────────────────
-    private class AnomalyDetectProcessor implements Processor<String, String> {
-        private ProcessorContext ctx;
-        private org.apache.kafka.streams.state.KeyValueStore<String, AnomalyState> store;
+    // ── Processor (Kafka Streams 3.x new API) ─────────────────────────────────
+    private class AnomalyDetectProcessor implements Processor<String, String, Void, Void> {
+
+        private KeyValueStore<String, AnomalyState> store;
 
         @Override
-        @SuppressWarnings("unchecked")
-        public void init(ProcessorContext ctx) {
-            this.ctx = ctx;
-            this.store = ctx.getStateStore("anomaly-state-store");
+        public void init(ProcessorContext<Void, Void> context) {
+            this.store = context.getStateStore("anomaly-state-store");
         }
 
         @Override
-        public void process(String key, String value) {
+        public void process(Record<String, String> record) {
             try {
-                SensorReading r = mapper.readValue(value, SensorReading.class);
+                SensorReading r = mapper.readValue(record.value(), SensorReading.class);
                 String storeKey = r.equipmentId() + "|" + r.tag();
 
                 AnomalyState state = store.get(storeKey);
@@ -123,10 +129,11 @@ public class KafkaStreamsAnomalyProcessor {
             }
         }
 
-        @Override public void close() {}
+        @Override
+        public void close() {}
     }
 
-    // ── TimescaleDB anomaly_events write ──────────────────────────────────────
+    // ── TimescaleDB write ──────────────────────────────────────────────────────
     private void persistAnomaly(SensorReading r, AnomalyState state, double zScore) {
         try (Connection conn = timescaleDs.getConnection();
              PreparedStatement ps = conn.prepareStatement("""
@@ -155,36 +162,48 @@ public class KafkaStreamsAnomalyProcessor {
             );
             WorkflowClient client = WorkflowClient.newInstance(service);
 
-            String workflowId = "cbm-" + r.equipmentId() + "-" + UUID.randomUUID().toString().substring(0, 8);
+            // One workflow per equipment — all anomalous tags on the same
+            // equipment correlate into a single maintenance diagnosis.
+            String workflowId = "cbm-" + r.equipmentId();
+            java.util.Map<String, Object> event = java.util.Map.of(
+                "equipment_id", r.equipmentId(),
+                "line_id",      r.lineId(),
+                "tag",          r.tag(),
+                "value",        r.value(),
+                "z_score",      zScore,
+                "mean",         state.mean,
+                "stddev",       state.stddev(),
+                "detected_at",  r.timestamp()
+            );
+
             var options = WorkflowOptions.newBuilder()
                 .setTaskQueue("cbm-task-queue")
                 .setWorkflowId(workflowId)
                 .build();
 
-            // Start asynchronously — don't block the Kafka Streams thread
             com.jslmind.workflows.CBMWorkflow wf =
                 client.newWorkflowStub(com.jslmind.workflows.CBMWorkflow.class, options);
 
-            WorkflowClient.start(wf::execute, java.util.Map.of(
-                "equipment_id",  r.equipmentId(),
-                "line_id",       r.lineId(),
-                "tag",           r.tag(),
-                "value",         r.value(),
-                "z_score",       zScore,
-                "mean",          state.mean,
-                "stddev",        state.stddev(),
-                "detected_at",   r.timestamp()
-            ));
-            log.info("[AnomalyProcessor] CBMWorkflow started: {}", workflowId);
+            try {
+                WorkflowClient.start(wf::execute, event);
+                log.info("[AnomalyProcessor] CBMWorkflow started: {} (trigger tag: {})", workflowId, r.tag());
+            } catch (io.temporal.client.WorkflowExecutionAlreadyStarted ignored) {
+                // Workflow already running for this equipment — signal with the
+                // correlated anomaly so it can build a multi-sensor diagnosis.
+                com.jslmind.workflows.CBMWorkflow existing =
+                    client.newWorkflowStub(com.jslmind.workflows.CBMWorkflow.class, workflowId);
+                existing.addCorrelatedAnomaly(event);
+                log.info("[AnomalyProcessor] Correlated {}/{} z={} → {}", r.equipmentId(), r.tag(), String.format("%.2f", zScore), workflowId);
+            }
         } catch (Exception e) {
             log.error("Failed to trigger CBMWorkflow: {}", e.getMessage());
         }
     }
 
-    // Trivial Java serialization for in-memory store (demo only)
     private byte[] serialize(AnomalyState s) {
         try { return mapper.writeValueAsBytes(s); } catch (Exception e) { return new byte[0]; }
     }
+
     private AnomalyState deserialize(byte[] data) {
         try { return mapper.readValue(data, AnomalyState.class); } catch (Exception e) { return new AnomalyState(); }
     }

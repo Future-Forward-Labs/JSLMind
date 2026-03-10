@@ -35,25 +35,50 @@
 
   <build>
     <plugins>
+      <!--
+        maven-shade-plugin with ServicesResourceTransformer:
+        Correctly merges META-INF/services/* from all JARs on the classpath.
+        This is critical for gRPC — without it, NameResolverProvider and
+        LoadBalancerProvider SPI files get overwritten (not merged) by
+        maven-assembly-plugin, breaking DNS resolution and causing
+        UnsupportedAddressTypeException / Unix-socket-path errors at runtime.
+      -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>3.6.0</version>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>com.jslmind.workflows.CBMWorker</mainClass>
-            </manifest>
-          </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-        </configuration>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.2</version>
         <executions>
           <execution>
-            <id>make-assembly</id>
             <phase>package</phase>
-            <goals><goal>single</goal></goals>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <shadedArtifactAttached>false</shadedArtifactAttached>
+              <transformers>
+                <!-- Merge META-INF/services/* — required for gRPC SPI -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <!-- Set main class -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.jslmind.workflows.CBMWorker</mainClass>
+                </transformer>
+                <!-- Merge NOTICE / LICENSE files to avoid conflicts -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheLicenseResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                  <addHeader>false</addHeader>
+                </transformer>
+              </transformers>
+              <filters>
+                <!-- Drop signature files — required when merging signed JARs -->
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
           </execution>
         </executions>
       </plugin>
