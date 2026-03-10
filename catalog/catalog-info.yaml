@@ -8,11 +8,24 @@ metadata:
   description: Root catalog location for JSLMind demo platform
 spec:
   targets:
+    # Platform context
     - ./domain/manufacturing.yaml
     - ./system/jslmind-platform.yaml
+    # Agents (kind: Agent)
     - ./agents/inventory-agent.yaml
     - ./agents/cbm-agent.yaml
     - ./agents/quality-agent.yaml
+    # Integrations (kind: Integration)
     - ./integrations/sap-mm-connector.yaml
     - ./integrations/kepware-opc-connector.yaml
+    # Data Products (kind: DataProduct)
     - ./data-products/rag-pipeline.yaml
+    # Models (kind: AIModel) — Foundation LLMs
+    - ./models/mistral-7b-instruct.yaml
+    # Models (kind: AIModel) — Embedding Models
+    - ./models/bge-m3-embedding.yaml
+    # Models (kind: AIModel) — Custom ML Models
+    - ./models/cbm-isolation-forest.yaml
+    - ./models/surface-defect-cnn.yaml
+    - ./models/inventory-xgboost.yaml
+    - ./models/costing-statsmodel.yaml

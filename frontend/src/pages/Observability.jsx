@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import LaunchButton from '../components/LaunchButton.jsx'
 
+const USD_TO_INR = 83
+
 const DEPT_BUDGETS = [
   { label: 'Operations Team', key: 'operations-team', budget: 50000, color: 'bg-emerald-500' },
   { label: 'Finance Team',    key: 'finance-team',    budget: 30000, color: 'bg-blue-500' },
@@ -12,14 +14,18 @@ function useLiteLLMSpend() {
   useEffect(() => {
     const fetch_ = async () => {
       try {
-        const r = await fetch('http://localhost:4000/spend/logs', {
+        const r = await fetch('/proxy/litellm/team/list', {
           headers: { Authorization: `Bearer ${import.meta.env.VITE_LITELLM_KEY ?? 'sk-jsl-master'}` },
         })
         if (!r.ok) return
         const data = await r.json()
+        const teams = Array.isArray(data) ? data : (data.teams ?? data.data ?? [])
         const map = {}
-        for (const entry of data) {
-          if (entry.user_id) map[entry.user_id] = (map[entry.user_id] || 0) + (entry.spend || 0)
+        for (const team of teams) {
+          if (team.team_alias) {
+            // LiteLLM tracks spend in USD — convert to INR for display
+            map[team.team_alias] = (team.spend || 0) * USD_TO_INR
+          }
         }
         setSpend(map)
       } catch (_) {}
@@ -39,7 +45,7 @@ function useLangfuseTraces() {
       const sk = import.meta.env.VITE_LANGFUSE_SECRET_KEY
       if (!pk || !sk) return
       try {
-        const r = await fetch('http://localhost:3002/api/public/traces?limit=5', {
+        const r = await fetch('/proxy/langfuse/api/public/traces?limit=5', {
           headers: { Authorization: 'Basic ' + btoa(`${pk}:${sk}`) },
         })
         if (!r.ok) return

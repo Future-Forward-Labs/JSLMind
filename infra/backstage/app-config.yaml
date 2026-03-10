@@ -16,7 +16,7 @@ backend:
 
 catalog:
   rules:
-    - allow: [Domain, System, Component, Location]
+    - allow: [Domain, System, Component, API, Resource, Location, Template, User, Group]
   locations:
     - type: file
       target: /catalog/catalog-info.yaml

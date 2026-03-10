@@ -1,0 +1,33 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: mistral-7b-instruct
+  title: "Mistral 7B Instruct (On-Prem)"
+  description: >
+    Primary on-premise LLM for all JSL agents and RAG responses. Runs via
+    Ollama on local Docker. Routed through LiteLLM as jsl-primary. Falls
+    back to Claude API (jsl-fallback) on timeout. Frame in production as
+    Llama 3.1 70B on JSL GPU servers — same API surface.
+  tags: [llm, foundation-model, on-prem, ollama, primary]
+  annotations:
+    litellm/model-name: jsl-primary
+    litellm/provider: ollama
+    ollama/model: mistral
+    langfuse/project: jslmind-prod
+spec:
+  type: foundation-llm
+  model_type: foundation-llm
+  lifecycle: production
+  owner: platform-team
+  system: jslmind-platform
+  serving: ollama
+  context_window_tokens: 32768
+  quantisation: Q4_K_M
+  cost_per_1k_tokens: "₹0 (on-prem)"
+  latency_p95_ms: 800
+  use_cases:
+    - agent reasoning (Dify + LangGraph)
+    - RAG answer generation
+    - cost variance narrative
+    - inventory analysis
+  production_equivalent: "vLLM + Llama 3.1 70B on JSL GPU servers"

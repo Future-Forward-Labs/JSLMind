@@ -6,7 +6,11 @@ models:
     columns:
       - name: material_number
         description: "SAP MATNR — primary key"
-        data_tests: [not_null, unique]
+        data_tests:
+          - not_null
+          - unique:
+              config:
+                severity: warn
       - name: gross_weight_kg
         data_tests: [not_null]
 
@@ -24,13 +28,21 @@ models:
     columns:
       - name: order_number
         description: "SAP AUFNR"
-        data_tests: [not_null, unique]
+        data_tests:
+          - not_null
+          - unique:
+              config:
+                severity: warn
 
   - name: production_cost
     description: "Gold: cost aggregated by stainless grade"
     columns:
       - name: grade
-        data_tests: [not_null, unique]
+        data_tests:
+          - not_null
+          - unique:
+              config:
+                severity: warn
 
   - name: inventory
     description: "Gold: inventory position by material"

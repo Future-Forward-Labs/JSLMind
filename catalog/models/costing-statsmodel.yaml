@@ -1,0 +1,42 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: costing-variance-model
+  title: "Costing Variance Analyser — Statistical Model"
+  description: >
+    Statistical variance analysis model for production cost monitoring.
+    Computes actual vs standard cost variance by stainless grade and
+    cost element (material, energy, labour). Results feed the
+    CostingAnalyticsWorkflow (Temporal) which generates an LLM narrative
+    and routes for CFO approval. Input from Gold.production_cost (dbt).
+  tags: [ml-model, costing, variance-analysis, statsmodels, finance, sap-co]
+  annotations:
+    mlflow/model-name: costing-variance-model
+    mlflow/stage: Production
+    mlflow/registry: "http://mlflow:5000"
+    serving/endpoint: "http://bentoml:3000/costing/variance"
+    monitoring/evidently: "http://evidently:8080/projects/costing"
+spec:
+  type: ml-model
+  model_type: ml-model
+  lifecycle: production
+  owner: finance-team
+  system: jslmind-platform
+  framework: statsmodels
+  algorithm: ARIMA + rule-based threshold detection
+  serving: bentoml
+  inputs:
+    - name: grade
+      type: string
+    - name: cost_period
+      type: date
+    - name: actual_cost_inr
+      type: float
+    - name: standard_cost_inr
+      type: float
+  output: "variance_pct + variance_category: [within-budget, warning, over-budget]"
+  eval_metrics:
+    variance_detection_accuracy: 0.96
+  training_data: "Gold.production_cost 2024–2025 (SAP CO actuals)"
+  last_retrained: "2026-01-15"
+  retraining_trigger: "quarterly or after standard cost revision in SAP"

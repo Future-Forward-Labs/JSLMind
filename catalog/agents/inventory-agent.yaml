@@ -2,13 +2,27 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: inventory-agent
-  description: Monitors SAP MM stock levels and raises reorder alerts via Temporal workflow
+  title: "Inventory Optimization Agent"
+  description: >
+    Monitors SAP MM stock levels against 30-day demand forecasts from
+    Gold.production_inventory. Raises reorder alerts via Temporal
+    InventoryAgentWorkflow and posts to Teams via n8n.
+  tags: [inventory, sap-mm, forecasting, operations]
   annotations:
-    litellm/model: jsl-quality
+    litellm/model: jsl-primary
     temporal/task-queue: inventory-agent
+    temporal/workflow: InventoryAgentWorkflow
+    n8n/trigger: sap-stock-event
     demo/ui: "Inventory Agent — tracks SAP MM stock levels and flags reorder alerts"
+    demo/wow: "SAP stock drop → n8n trigger → agent alert in Teams in <10s"
 spec:
   type: ai-agent
+  agent_type: dify
   lifecycle: production
   owner: operations-team
   system: jslmind-platform
+  uses_models:
+    - inventory-xgboost
+    - mistral-7b-instruct
+  trigger: n8n-schedule
+  trigger_schedule: "daily 06:00 IST"

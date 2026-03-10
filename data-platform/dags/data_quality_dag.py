@@ -10,7 +10,7 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 
-DBT_CMD = "cd /opt/airflow/dbt && dbt {cmd} --profiles-dir /opt/airflow/dbt --project-dir /opt/airflow/dbt"
+DBT_CMD = "cd /opt/airflow/dbt && /home/airflow/.local/bin/dbt {cmd} --profiles-dir /opt/airflow/dbt --project-dir /opt/airflow/dbt"
 
 default_args = {"owner": "jslmind", "retries": 0}
 
@@ -22,7 +22,7 @@ def check_gold_counts(**context):
     conn = duckdb.connect("/opt/airflow/medallion/jslmind.duckdb", read_only=True)
     results = {}
     try:
-        for table in ("gold.production_cost", "gold.inventory", "gold.quality"):
+        for table in ("main_gold.production_cost", "main_gold.inventory", "main_gold.quality"):
             try:
                 count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
                 results[table] = {"count": count, "status": "PASS" if count > 0 else "WARN"}

@@ -1,0 +1,37 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: surface-defect-cnn
+  title: "Surface Defect Detector — CNN"
+  description: >
+    PyTorch CNN model for detecting surface defects on stainless steel coils.
+    Classifies camera frames into: OK, minor-scratch, major-scratch, pit,
+    edge-crack. Used by the Quality Agent (LangGraph) which is exposed as
+    an MCP tool for Dify. Grade-specific thresholds for 304, 316L, and 430.
+  tags: [ml-model, quality, surface-defect, pytorch, cnn, grade-316l, mcp]
+  annotations:
+    mlflow/model-name: surface-defect-cnn
+    mlflow/stage: Production
+    mlflow/registry: "http://mlflow:5000"
+    serving/endpoint: "http://bentoml:3000/surface-defect/predict"
+    monitoring/evidently: "http://evidently:8080/projects/surface-defect"
+spec:
+  type: ml-model
+  model_type: ml-model
+  lifecycle: production
+  owner: quality-team
+  system: jslmind-platform
+  framework: pytorch
+  algorithm: CNN (ResNet-18 backbone)
+  serving: bentoml
+  inputs:
+    - name: camera_frame
+      type: "RGB image (224x224)"
+  output: "defect_class: [OK, minor-scratch, major-scratch, pit, edge-crack] + confidence"
+  eval_metrics:
+    accuracy: 0.91
+    f1_macro: 0.89
+  training_data: "Synthetic coil surface images — 5000 samples per class"
+  last_retrained: "2026-01-20"
+  supported_grades: [304, 316L, 430]
+  retraining_trigger: "quarterly or on camera calibration change"

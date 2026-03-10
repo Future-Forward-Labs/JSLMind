@@ -2,12 +2,25 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: sap-mm-connector
-  description: Apache Camel route that polls SAP MM (MARA/EKPO/AUFK) every 60s and lands data in MinIO Bronze bucket
+  title: "SAP MM → Bronze Connector"
+  description: >
+    Apache Camel route (sap-to-bronze) that polls SAP MM every 60s via
+    simulated OData/RFC. Flattens MARA/EKPO/AUFK schemas and lands
+    Parquet files in MinIO bronze-sap-mm bucket as Iceberg tables.
+  tags: [sap, camel, bronze, medallion, batch]
   annotations:
     camel/route-id: sap-to-bronze
-    source/system: SAP
+    camel/class: SapToBronzeRoute
+    source/system: SAP-MM
+    target/bucket: bronze-sap-mm
+    demo/sap-tables: "MARA, EKPO, AUFK"
 spec:
   type: integration
+  integration_type: batch-extract
+  protocol: OData-RFC-simulated
   lifecycle: production
-  owner: operations-team
+  owner: platform-team
   system: jslmind-platform
+  source: SAP-ECC
+  target: MinIO-Bronze
+  cadence: "60s poll"

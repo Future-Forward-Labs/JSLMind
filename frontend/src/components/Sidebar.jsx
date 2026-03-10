@@ -4,7 +4,7 @@ const ACTIVE_PILLARS = [
   { to: '/',          label: 'Overview',           icon: '⬡' },
   { to: '/ot',        label: 'OT / CBM',           icon: '◈' },
   { to: '/rag',       label: 'Hybrid RAG',         icon: '◈' },
-  { to: '/catalog',   label: 'Agent Catalog',      icon: '◉' },
+  { to: '/catalog',   label: 'Catalog',            icon: '◉' },
   { to: '/observe',   label: 'Observability',      icon: '◎' },
   { to: '/medallion', label: 'Medallion Pipeline', icon: '⬟' },
 ]

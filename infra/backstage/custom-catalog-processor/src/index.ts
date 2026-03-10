@@ -1,0 +1,1 @@
+export { JslMindEntityProcessor } from './JslMindEntityProcessor';

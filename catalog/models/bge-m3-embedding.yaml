@@ -1,0 +1,31 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: bge-m3-embedding
+  title: "BGE-M3 Multilingual Embedding Model"
+  description: >
+    Dense vector embedding model used by all RAG pipelines. Multilingual
+    (English + Hindi) with 1024-dimensional output. Runs on-premise via
+    Ollama — no text leaves JSL's network. Encodes JSL SOPs, grade
+    specifications, and maintenance manuals for Qdrant retrieval.
+  tags: [embedding-model, rag, multilingual, on-prem, ollama, bge]
+  annotations:
+    ollama/model: bge-m3
+    qdrant/collection: jsl-docs
+spec:
+  type: embedding-model
+  model_type: embedding
+  lifecycle: production
+  owner: platform-team
+  system: jslmind-platform
+  serving: ollama
+  embedding_dimensions: 1024
+  max_input_tokens: 8192
+  languages: [English, Hindi]
+  cost_per_1k_tokens: "₹0 (on-prem)"
+  latency_p95_ms: 45
+  use_cases:
+    - RAG dense retrieval (Qdrant)
+    - document similarity
+    - grade spec semantic search
+    - SOP cross-reference

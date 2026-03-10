@@ -2,13 +2,27 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: cbm-agent
-  description: Condition-Based Maintenance agent — detects OT sensor anomalies and triggers SAP PM notifications
+  title: "CBM Anomaly Agent"
+  description: >
+    Condition-Based Maintenance agent — detects OT sensor anomalies via
+    Kafka Streams Z-score scoring and triggers a 5-step Temporal CBMWorkflow
+    that creates SAP PM notifications and schedules maintenance.
+  tags: [cbm, anomaly-detection, ot, temporal, maintenance]
   annotations:
-    litellm/model: jsl-quality
+    litellm/model: jsl-primary
     temporal/task-queue: cbm-agent
+    temporal/workflow: CBMWorkflow
+    mlflow/model: cbm-isolation-forest
     demo/ui: "CBM Agent — monitors OT sensor anomalies and triggers maintenance workflows"
+    demo/wow: "Inject anomaly → Temporal 5-step workflow visible in UI within 3s"
 spec:
   type: ai-agent
+  agent_type: langgraph
   lifecycle: production
-  owner: operations-team
+  owner: maintenance-team
   system: jslmind-platform
+  uses_models:
+    - cbm-isolation-forest
+    - mistral-7b-instruct
+  trigger: kafka-event
+  trigger_topic: plant.anomalies

@@ -2,13 +2,28 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: quality-agent
-  description: Surface defect detection agent for Grade 316L production runs using Isolation Forest + LlamaIndex RAG
+  title: "Grade Quality Monitor Agent"
+  description: >
+    Surface defect detection agent for Grade 316L production runs. Uses
+    Isolation Forest scoring on camera frame features + LlamaIndex hybrid
+    RAG on grade specifications and SOPs. Exposes as MCP tool for Dify.
+  tags: [quality, surface-defect, rag, mcp, grade-316l]
   annotations:
-    litellm/model: jsl-quality
+    litellm/model: jsl-primary
     temporal/task-queue: quality-agent
+    mcp/endpoint: "http://langgraph-service:8000/mcp/tools/surface_inspection"
+    mlflow/model: surface-defect-cnn
     demo/ui: "Quality Agent — detects surface defects on 316L grade production runs"
+    demo/wow: "Plant manager calls this as MCP tool from Dify — no-code to complex ML in one click"
 spec:
   type: ai-agent
+  agent_type: langgraph
   lifecycle: production
   owner: quality-team
   system: jslmind-platform
+  uses_models:
+    - surface-defect-cnn
+    - bge-m3-embedding
+    - mistral-7b-instruct
+  trigger: mcp-call
+  exposes_mcp_tool: check_surface_defect_rate

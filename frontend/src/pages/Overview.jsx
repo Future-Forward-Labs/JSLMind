@@ -2,16 +2,16 @@ import ServiceCard from '../components/ServiceCard.jsx'
 import { useEffect, useState } from 'react'
 
 const SERVICES = [
-  { name: 'RAG Service',     port: 8001, url: 'http://localhost:8001/docs',      healthUrl: 'http://localhost:8001/health' },
-  { name: 'Qdrant',          port: 6333, url: 'http://localhost:6333/dashboard', healthUrl: 'http://localhost:6333/healthz' },
-  { name: 'Camel',           port: 8090, url: 'http://localhost:8090/actuator',  healthUrl: 'http://localhost:8090/actuator/health' },
-  { name: 'Backstage',       port: 7007, url: 'http://localhost:7007',           healthUrl: 'http://localhost:7007/healthcheck' },
-  { name: 'LiteLLM',         port: 4000, url: 'http://localhost:4000/ui',        healthUrl: 'http://localhost:4000/health' },
-  { name: 'Langfuse',        port: 3002, url: 'http://localhost:3002',           healthUrl: 'http://localhost:3002/api/public/health' },
-  { name: 'Grafana',         port: 3001, url: 'http://localhost:3001',           healthUrl: 'http://localhost:3001/api/health' },
-  { name: 'MinIO',           port: 9001, url: 'http://localhost:9001',           healthUrl: 'http://localhost:9000/minio/health/live' },
-  { name: 'Kong',            port: 8000, url: 'http://localhost:8002',           healthUrl: 'http://localhost:8002/status' },
-  { name: 'Keycloak',        port: 8080, url: 'http://localhost:8080/admin',     healthUrl: 'http://localhost:8080/health/ready' },
+  { name: 'RAG Service',     port: 8001, url: 'http://localhost:8001/docs',      healthUrl: '/proxy/rag/health' },
+  { name: 'Qdrant',          port: 6333, url: 'http://localhost:6333/dashboard', healthUrl: '/proxy/qdrant/healthz' },
+  { name: 'Camel',           port: 8090, url: 'http://localhost:8090/actuator',  healthUrl: '/proxy/camel/actuator/health' },
+  { name: 'Backstage',       port: 7007, url: 'http://localhost:7007',           healthUrl: '/proxy/backstage/healthcheck' },
+  { name: 'LiteLLM',         port: 4000, url: 'http://localhost:4000/ui',        healthUrl: '/proxy/litellm/health' },
+  { name: 'Langfuse',        port: 3002, url: 'http://localhost:3002',           healthUrl: '/proxy/langfuse/api/public/health' },
+  { name: 'Grafana',         port: 3001, url: 'http://localhost:3001',           healthUrl: '/proxy/grafana/api/health' },
+  { name: 'MinIO',           port: 9001, url: 'http://localhost:9001',           healthUrl: '/proxy/minio/minio/health/live' },
+  { name: 'Kong',            port: 8000, url: 'http://localhost:8002',           healthUrl: '/proxy/kong/status' },
+  { name: 'Keycloak',        port: 8080, url: 'http://localhost:8080/admin',     healthUrl: '/proxy/keycloak/health/ready' },
 ]
 
 function useQuickStats() {

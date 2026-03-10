@@ -2,12 +2,28 @@ apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
   name: kepware-opc-connector
-  description: Apache Camel MQTT bridge that streams Kepware OPC-UA sensor tags to RedPanda in real time
+  title: "Kepware OPC-UA → RedPanda Connector"
+  description: >
+    Apache Camel MQTT bridge (kepware-to-kafka route) that ingests 13 PLC
+    sensor tags from 3 equipment units (CRM-1, APL-1, CCM-1) at 1Hz.
+    Normalises tag names, enriches with equipment metadata, and publishes
+    to RedPanda topic plant.sensors. Kafka Streams inside the same SpringBoot
+    app performs 30s Z-score anomaly scoring per (equipment, tag) pair.
+  tags: [ot, mqtt, opc-ua, camel, real-time, kafka-streams]
   annotations:
     camel/route-id: kepware-to-kafka
-    source/system: Kepware
+    camel/class: KepwareToKafkaRoute
+    source/system: Kepware-OPC-UA
+    target/topic: plant.sensors
+    streaming/processor: KafkaStreamsAnomalyProcessor
+    demo/equipment: "CRM-1, APL-1, CCM-1"
 spec:
   type: integration
+  integration_type: real-time-stream
+  protocol: MQTT-OPC-UA-simulated
   lifecycle: production
-  owner: operations-team
+  owner: platform-team
   system: jslmind-platform
+  source: Kepware-OPC-UA
+  target: RedPanda-plant.sensors
+  cadence: "1Hz per tag"

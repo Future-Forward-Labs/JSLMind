@@ -97,7 +97,8 @@
 │  Apache Camel           │      │  Apache Camel                     │
 │  MQTT → RedPanda        │      │  SAP RFC/OData → Bronze           │
 │  (Kepware/Ignition OT)  │      │  SharePoint → Qdrant              │
-│  PyFlink anomaly scoring│      │  Airflow-scheduled DAGs           │
+│  Kafka Streams anomaly  │      │  Airflow-scheduled DAGs           │
+│  scoring (Z-score)      │      │                                   │
 └─────────────────────────┘      └───────────────────────────────────┘
 ```
 
@@ -117,6 +118,7 @@
 | LLM routing & cost control | WSO2 AI Gateway | **LiteLLM Proxy** | LiteLLM + Kong | ✅ Full |
 | Identity / Agent IAM | WSO2 Identity Server | **Keycloak** | Keycloak cluster | ✅ Full |
 | Observability | WSO2 Analytics | **Langfuse + Grafana** | Langfuse + Prometheus | ✅ Full |
+| Model lifecycle & MLOps | WSO2 — no equivalent | **MLflow + BentoML + Evidently** | MLflow cluster + Seldon | ✅ Full |
 
 ---
 
@@ -133,9 +135,9 @@
 | Data Source | Python MQTT publisher (simulated PLC/Kepware) | Mimics Ignition OPC-UA tag output |
 | Integration | Apache Camel (MQTT → RedPanda route) | Protocol mediation — production-identical to real Kepware |
 | Streaming | RedPanda (single binary, zero config) | Kafka-compatible, saves 1 day vs full Kafka setup |
-| Stream Processing | PyFlink consumer + Isolation Forest | Real-time anomaly scoring on sensor windows |
+| Stream Processing | Kafka Streams (inside Camel SpringBoot) | 30s Z-score anomaly scoring per (equipment, tag) — KafkaStreamsAnomalyProcessor |
+| ML Model | Isolation Forest (scikit-learn) | Pre-trained on 90 days synthetic JSL Plant 1 data. Served via BentoML. |
 | Workflow | Temporal — `CBMWorkflow` | Durable 5-step workflow (see below) |
-| ML Model | Isolation Forest + LSTM (scikit-learn + PyTorch) | Pretrained on synthetic steel plant data |
 | Alerting | FastAPI WebSocket → demo UI | Real-time alert feed with Temporal trace link |
 | Storage | TimescaleDB (Bronze landing) | Time-series optimised; Iceberg for historical |
 
@@ -145,10 +147,10 @@
 DetectAnomaly → ScoreConfidence → CreateSAPNotification → WaitForApproval → ScheduleMaintenance
      ↑                                      ↑
   Kafka event                         Camel RFC stub
-  (PyFlink)                           (simulated SAP PM)
+  (Kafka Streams)                     (simulated SAP PM)
 ```
 
-- **Trigger:** Kafka anomaly event from PyFlink
+- **Trigger:** Kafka anomaly event from Kafka Streams
 - **Durability:** Survives system restart — resumes from last successful step
 - **Human-in-loop:** WaitForApproval step pauses until maintenance manager approves
 
@@ -157,7 +159,7 @@ DetectAnomaly → ScoreConfidence → CreateSAPNotification → WaitForApproval 
 1. Simulate 5 PLC tags live: temperature, vibration, current, pressure, RPM
 2. Show Apache Camel route: `MQTT → transform → RedPanda topic: plant.sensors`
 3. **Inject anomaly spike** via "Simulate Failure" button in demo UI
-4. PyFlink scores anomaly: bearing #3 — 94% confidence
+4. Kafka Streams Z-score processor flags anomaly: bearing #3 — 94% confidence
 5. Temporal `CBMWorkflow` kicks off — open Temporal UI, show execution graph
 6. Workflow step: SAP PM notification auto-created (Camel RFC stub fires)
 7. Alert appears: "Roll bearing #3 — predicted failure in 48hrs"
@@ -407,6 +409,15 @@ Pre-seeded entities for demo:
 | Integration | `sap-mm-connector` | platform-team | deployed |
 | Integration | `kepware-opc-connector` | platform-team | deployed |
 | DataProduct | `gold-production-cost` | data-team | deployed |
+| DataProduct | `rag-pipeline` | platform-team | deployed |
+| AIModel | `mistral-7b-instruct` | platform-team | deployed |
+| AIModel | `bge-m3-embedding` | platform-team | deployed |
+| AIModel | `cbm-isolation-forest` | maintenance-team | deployed |
+| AIModel | `surface-defect-cnn` | quality-team | deployed |
+| AIModel | `inventory-xgboost` | operations-team | deployed |
+| AIModel | `costing-variance-model` | finance-team | deployed |
+
+**Custom entity kinds used:** `Agent` (ai agents), `AIModel` (all model types), `Integration` (Camel routes/connectors), `DataProduct` (data assets). Each kind has its own spec fields — not generic `Component` with `type`. A lightweight Backstage catalog processor plugin registers these custom kinds.
 
 **Production story:** Replace Backstage standalone with OpenChoreo. All agents auto-register via CRDs on deploy. Same MCP Hub experience as WSO2 — fully OSS.
 
@@ -521,6 +532,188 @@ general_settings:
 
 ---
 
+## 10.5 Model Layer — LLMOps & MLOps
+
+**Gap addressed:** The platform manages agents and data products but previously had no first-class model layer. Every model — foundation LLMs, embedding models, fine-tuned LLMs, and custom ML models — is now a catalogued, versioned, monitored asset.
+
+### Model Taxonomy (JSL Context)
+
+| Model Type | Examples | Serving | Tracked In |
+|---|---|---|---|
+| Foundation LLM | Mistral 7B (demo), Llama 3.1 70B (prod) | Ollama / vLLM | LiteLLM + MLflow (metadata) |
+| Embedding Model | BGE-M3 (multilingual, 1024-dim) | Ollama | MLflow (metadata) |
+| Fine-tuned LLM | Llama 3.1 8B fine-tuned on JSL SOPs | vLLM | MLflow (adapter artifact) |
+| Custom ML Model | Isolation Forest (CBM), Surface Defect CNN, Inventory XGBoost, Costing StatsModel | BentoML | MLflow (full artifact) |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                   MODEL REGISTRY (MLflow)                            │
+│  LLMs · Fine-tuned · Embeddings · Custom ML — unified registry      │
+│  Versions · Experiments · Metrics · Artifacts · Stage transitions   │
+└──────────┬──────────────────────────────────┬───────────────────────┘
+           │                                  │
+┌──────────▼──────────────┐      ┌────────────▼──────────────────────┐
+│   LLMOps PIPELINE       │      │   MLOps PIPELINE                  │
+│                         │      │                                   │
+│  Langfuse               │      │  Airflow DAGs                     │
+│  • LLM traces           │      │  • Retrain on new sensor data     │
+│  • Prompt versioning    │      │  • Scheduled eval jobs            │
+│  • A/B eval datasets    │      │  • Feature engineering (dbt→Gold) │
+│                         │      │                                   │
+│  RAGAS (eval DAG)       │      │  Evidently AI                     │
+│  • RAG faithfulness     │      │  • Data drift detection           │
+│  • Answer relevancy     │      │  • Model drift alerts             │
+│  • Context recall       │      │  • Feature distribution shift     │
+│                         │      │                                   │
+│  LiteLLM A/B routing    │      │  BentoML                         │
+│  • weight: 0.2 →        │      │  • Serve sklearn/PyTorch models  │
+│    fine-tuned variant   │      │  • Versioned REST endpoints      │
+└─────────────────────────┘      └───────────────────────────────────┘
+           │                                  │
+┌──────────▼──────────────────────────────────▼───────────────────────┐
+│           BACKSTAGE MODEL CATALOG (kind: AIModel)                    │
+│  foundation-llm · embedding-model · fine-tuned-llm · ml-model       │
+│  Owner · Version · Endpoint · Use cases · Eval scores · Cost/call   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### MLflow — Unified Model Registry
+
+MLflow is the single source of truth for all model types, backed by MinIO for artifact storage:
+
+- **Foundation LLMs / Embeddings** — metadata-only entries (weights served via Ollama/vLLM, not stored in MLflow)
+- **Custom ML models** — full artifact storage (pickle, PyTorch checkpoint) in `s3://mlflow-artifacts/`
+- **Fine-tuned LLMs** — LoRA adapter stored as artifact; base model referenced by name
+- **Stage gates:** `None → Staging → Production → Archived` — promotion requires Langfuse eval score ≥ threshold
+
+### BentoML — ML Model Serving (decouples models from pipeline code)
+
+All custom ML models are decoupled from pipeline code and served via BentoML REST endpoints:
+
+| Model | BentoML Endpoint | Called By |
+|---|---|---|
+| cbm-isolation-forest | `POST /cbm/predict` | KafkaStreamsAnomalyProcessor (Camel) |
+| surface-defect-cnn | `POST /surface-defect/predict` | Quality Agent (LangGraph) |
+| inventory-xgboost | `POST /inventory/forecast` | Inventory Agent (Dify/LangGraph) |
+| costing-variance-model | `POST /costing/variance` | CostingAnalyticsWorkflow (Temporal) |
+
+This means retraining and promoting a new model version in MLflow automatically serves a new BentoML build — no changes to agent or workflow code.
+
+### Evidently AI — Model & Data Drift Monitoring
+
+Daily Airflow DAG (`model_monitoring_dag`) checks each model:
+
+```
+Fetch last 24h data (Silver/Gold layer)
+        │
+        ▼
+Evidently DataDriftReport vs training baseline
+        │
+        ├─ drift ≤ threshold → green in Grafana
+        ├─ drift > threshold → Teams alert + Backstage model badge: ⚠️ drift
+        └─ drift > 2× threshold → trigger retraining DAG automatically
+```
+
+**Why this matters for JSL:** Sensor distributions shift when new equipment is installed. Steel demand patterns change seasonally. Model drift monitoring prevents silent degradation.
+
+### RAGAS — RAG Pipeline Evaluation
+
+Weekly Airflow DAG (`rag_eval_dag`) evaluates RAG quality against a golden Q&A dataset:
+
+| Metric | Target | Alert Threshold |
+|---|---|---|
+| Faithfulness | ≥ 0.90 | < 0.85 |
+| Answer Relevancy | ≥ 0.88 | < 0.80 |
+| Context Recall | ≥ 0.85 | < 0.78 |
+
+Scores are pushed to Langfuse as dataset evals and visualised in Grafana.
+
+### LiteLLM A/B Routing — Fine-tuned Model Testing
+
+When a fine-tuned model is promoted to Staging in MLflow, LiteLLM routes a percentage of traffic to it for comparison:
+
+```yaml
+# In litellm_config.yaml
+- model_name: jsl-rag-llm
+  litellm_params:
+    model: ollama/mistral
+  model_info:
+    weight: 0.8   # 80% baseline
+
+- model_name: jsl-rag-llm
+  litellm_params:
+    model: ollama/llama-jsl-sop   # fine-tuned variant
+  model_info:
+    weight: 0.2   # 20% A/B traffic
+```
+
+### Fine-tuning Pipeline (Phase 2 / Production Story)
+
+```
+JSL SOP drop in SharePoint
+      │ (Camel watcher → Bronze)
+      ▼
+Airflow: generate Q&A pairs from SOPs using base LLM
+      │
+      ▼
+Langfuse annotation queue → JSL domain expert review
+      │
+      ▼
+Axolotl fine-tuning job (LoRA on Llama 3.1 8B)
+• Metrics → MLflow experiment
+      │
+      ▼
+MLflow Staging → RAGAS eval → Langfuse A/B → promote to Production
+```
+
+Frame in demo: "In production, we retrain every quarter as new SOPs are added. The model learns JSL's terminology — grade naming, process codes, equipment IDs. It goes from 61% to 87% accuracy on JSL-specific questions."
+
+### New Backstage Entity Kind: AIModel
+
+All models are catalogued as `kind: AIModel` entities (not `kind: Component`). See `catalog/models/` for all definitions. Key fields per entity:
+
+```yaml
+kind: AIModel
+spec:
+  model_type: [foundation-llm | embedding | fine-tuned-llm | ml-model]
+  serving: [ollama | vllm | bentoml]
+  eval_metrics: { ... }
+  training_data: "..."
+  last_retrained: "YYYY-MM-DD"
+  retraining_trigger: "..."
+```
+
+### New Docker Compose Services (Model Layer)
+
+```yaml
+mlflow:
+  image: ghcr.io/mlflow/mlflow:latest
+  # Artifact store: MinIO s3://mlflow-artifacts/
+  # Backend store: PostgreSQL (shared instance)
+  ports: ["5000:5000"]
+
+evidently:
+  image: evidently/evidently-service:latest
+  ports: ["8082:8080"]
+
+bentoml:
+  build: ./serving/bentoml
+  ports: ["3001:3000"]
+  volumes: ["./models:/models"]
+```
+
+### Demo Talking Points — Model Layer
+
+1. **Model catalog:** "Every model that powers an agent is catalogued here — the LLM, the embedding model, and the domain-specific ML model. You can see accuracy metrics, when it was last retrained, and which agent uses it."
+2. **Drift monitoring:** "The CBM anomaly model retrains automatically when sensor data shifts — no engineer involvement. Evidently detects it, Airflow retrains, MLflow promotes."
+3. **Decoupled serving:** "Models are served independently of agent code. Promoting a new model version doesn't require any change to the Temporal workflow or the Dify agent."
+4. **Fine-tuning story:** "In production, we fine-tune Llama on your SOPs every quarter. Accuracy goes from 61% to 87% on JSL-specific questions because it learns your grade codes, equipment IDs, and process terminology."
+5. **A/B safety:** "We never cut over 100% to a new model. LiteLLM routes 20% traffic to the new variant while Langfuse compares quality scores. Promotion only happens when metrics are proven."
+
+---
+
 ## 11. Infrastructure — Docker Compose + AWS
 
 ### Docker Compose Stack (Full v3)
@@ -564,7 +757,12 @@ services:
   # Observability
   marquez:           # OpenLineage — data lineage UI
   langfuse:          # LLM observability — traces, evals, costs
-  
+
+  # Model layer (LLMOps / MLOps)
+  mlflow:            # Unified model registry — all model types, versions, metrics
+  evidently:         # Model & data drift monitoring + automated retraining alerts
+  bentoml:           # ML model serving — decouples model artifacts from pipeline code
+
   # API & frontend
   kong:              # AI Gateway (token mgmt, RBAC, MCP)
   fastapi-backend:   # Agent tools + RAG API + WebSocket endpoints
@@ -601,9 +799,10 @@ services:
 - [x] Great Expectations: 3 DQ checks per layer (nulls, schema, range) — implemented as dbt schema tests
 
 ### Day 3 — OT/CBM Streaming + Temporal
-- [ ] MQTT publisher: 5 synthetic PLC tags publishing at 1Hz
+- [ ] MQTT publisher: 5 synthetic PLC tags publishing at 1Hz (CRM-1, APL-1, CCM-1)
 - [ ] Camel MQTT → RedPanda route: live, verified with `rpk topic consume`
-- [ ] PyFlink consumer: Isolation Forest anomaly scoring on 30-second windows
+- [ ] KafkaStreamsAnomalyProcessor: Z-score anomaly scoring on 30s windows inside Camel SpringBoot
+- [ ] BentoML: serve cbm-isolation-forest model, Kafka Streams calls `/cbm/predict`
 - [ ] Temporal `CBMWorkflow`: all 5 steps implemented, Camel SAP PM stub activity working
 - [ ] Anomaly injection button: fires test event, Temporal workflow visible in UI
 
@@ -620,12 +819,22 @@ services:
 - [ ] n8n: 2 trigger workflows (SAP stock event → Dify agent, daily schedule → Costing agent)
 - [ ] LangGraph `InventoryAgent`: wraps as Temporal `InventoryAgentWorkflow`, MCP endpoint exposed
 
+### Day 5.5 — Model Layer (can run in parallel with Day 6)
+- [ ] MLflow: deploy with MinIO artifact store + PostgreSQL backend store
+- [ ] Register all 6 model entries in MLflow registry (metadata + stage = Production)
+- [ ] BentoML: build and deploy services for all 4 custom ML models
+- [ ] Evidently: deploy + configure drift dashboards for CBM and inventory models
+- [ ] RAGAS: create golden Q&A eval dataset (20 JSL-specific questions with ground truth)
+- [ ] Backstage: verify AIModel, Agent, Integration, DataProduct kinds render in catalog UI
+
 ### Day 6 — Unified UI + Token Management + Polish
 - [ ] LiteLLM proxy: Ollama + Claude fallback, virtual keys per 3 demo departments
 - [ ] Kong: wired in front of LiteLLM, token budget policies per dept key
 - [ ] Unified React demo UI: 4-pillar navigation, Backstage embed, Temporal UI link, Langfuse link
 - [ ] WebSocket: live sensor feed + anomaly alert panel in demo UI
 - [ ] End-to-end walkthrough rehearsal — time each section
+- [ ] Langfuse: create RAGAS eval dataset, run first RAG quality evaluation
+- [ ] Grafana: add model drift panels (Evidently metrics) to platform dashboard
 
 ### Day 7 — AWS Deployment + Rehearsal
 - [ ] AWS: EC2 g4dn.xlarge (Ollama) + ECS (all services) + S3 (MinIO replacement)
@@ -663,6 +872,8 @@ services:
 | Too many UI windows in demo | Medium | Single React app with embedded iframes/links to Backstage, Temporal UI, Dify, Langfuse. One screen, one narrative |
 | JSL asks for real SAP data | Medium | Synthetic data mirrors SAP MM schema exactly: MARA, EKPO, AUFK table/field names match |
 | 5-min agent SLA claim | Low | Demo Dify template (pre-configured, 1-click) — genuinely takes 3-4 minutes. Note custom agents need 15-20 min |
+| Model drift during demo | Low | Pre-warm all BentoML endpoints. Evidently dashboard pre-loaded. Run anomaly injection × 3 in rehearsal |
+| Custom Backstage kinds not rendering | Medium | Register CatalogProcessor plugin for Agent/AIModel/Integration/DataProduct kinds in Day 1 infra setup |
 
 ---
 

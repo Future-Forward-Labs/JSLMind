@@ -1,0 +1,42 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: inventory-xgboost
+  title: "Inventory Demand Forecast — XGBoost"
+  description: >
+    XGBoost model that forecasts 30-day material demand per grade per plant.
+    Trained on SAP CO historical production orders (AUFK) and seasonal
+    patterns. Feeds into the Inventory Optimization Agent to compute
+    reorder triggers. Input features from Gold.production_inventory.
+  tags: [ml-model, inventory, forecasting, xgboost, sap-co, operations]
+  annotations:
+    mlflow/model-name: inventory-xgboost
+    mlflow/stage: Production
+    mlflow/registry: "http://mlflow:5000"
+    serving/endpoint: "http://bentoml:3000/inventory/forecast"
+    monitoring/evidently: "http://evidently:8080/projects/inventory-forecast"
+spec:
+  type: ml-model
+  model_type: ml-model
+  lifecycle: production
+  owner: operations-team
+  system: jslmind-platform
+  framework: xgboost
+  algorithm: XGBoost Regressor
+  serving: bentoml
+  inputs:
+    - name: grade
+      type: string
+    - name: plant
+      type: string
+    - name: historical_demand_30d
+      type: float[]
+    - name: season_flag
+      type: int
+  output: "forecast_demand_30d (tonnes)"
+  eval_metrics:
+    mape: 0.042
+    rmse: 12.3
+  training_data: "Gold.production_inventory 2024–2025 (24 months, grades 304/316L/430)"
+  last_retrained: "2026-02-01"
+  retraining_trigger: "monthly Airflow DAG"
