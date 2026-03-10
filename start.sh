@@ -109,11 +109,25 @@ echo "  Waiting for Airflow init      ..."
 docker compose wait airflow-init 2>/dev/null || true
 
 docker compose up -d $BUILD_FLAG \
-  airflow-webserver airflow-scheduler marquez camel-integration
+  airflow-webserver airflow-scheduler marquez marquez-web camel-integration
 
-wait_for "MinIO"     "http://localhost:9000/minio/health/live"
-wait_for "Airflow"   "http://localhost:8085/health"
-wait_for "Marquez"   "http://localhost:5000/api/v1/namespaces"
+wait_for "MinIO"       "http://localhost:9000/minio/health/live"
+wait_for "Airflow"     "http://localhost:8085/health"
+wait_for "Marquez API" "http://localhost:5000/api/v1/namespaces"
+wait_for "Marquez UI"  "http://localhost:3004"
+
+# Create Airflow admin user if it doesn't exist yet
+docker compose exec -T airflow-webserver \
+  airflow users create --username admin --password admin \
+  --firstname Admin --lastname JSL --role Admin --email admin@jsl.com 2>/dev/null || true
+
+# Unpause and trigger DAGs
+AUTH="Basic $(echo -n 'admin:admin' | base64)"
+for dag in sap_ingest medallion_transform data_quality; do
+  curl -sf -X PATCH "http://localhost:8085/api/v1/dags/${dag}" \
+    -H "Authorization: $AUTH" -H "Content-Type: application/json" \
+    -d '{"is_paused": false}' >/dev/null || true
+done
 
 bash scripts/seed-sap-data.sh 2>/dev/null || true
 
@@ -156,7 +170,7 @@ docker compose up -d $BUILD_FLAG camel-integration
   echo "║  Langfuse       http://localhost:3002                ║"
   echo "║  Backstage      http://localhost:7007                ║"
   echo "║  MinIO          http://localhost:9001                ║"
-  echo "║  Marquez        http://localhost:5001                ║"
+  echo "║  Marquez UI     http://localhost:3004                ║"
   echo "╠══════════════════════════════════════════════════════╣"
   echo "║  Inject anomaly: curl -X POST                        ║"
   echo "║    http://localhost:8099/inject-anomaly?equipment=   ║"
@@ -197,6 +211,6 @@ echo "║  Langfuse       http://localhost:3002                ║"
 echo "║  Backstage      http://localhost:7007                ║"
 echo "║  MinIO          http://localhost:9001                ║"
 echo "║  Qdrant         http://localhost:6333/dashboard      ║"
-echo "║  Marquez        http://localhost:5001                ║"
+echo "║  Marquez UI     http://localhost:3004                ║"
 echo "╚══════════════════════════════════════════════════════╝"
 echo ""

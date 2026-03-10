@@ -99,11 +99,16 @@ docker compose up -d backstage
 # ── Phase 4 — Medallion Pipeline ──────────────────────────────────────────────
 docker compose up -d minio airflow-init
 sleep 30   # wait for Airflow DB migration
-docker compose up -d airflow-webserver airflow-scheduler marquez camel-integration
+docker compose up -d airflow-webserver airflow-scheduler marquez marquez-web camel-integration
 bash scripts/seed-minio.sh
 bash scripts/seed-sap-data.sh
+# Create Airflow admin user (airflow-init command may have a parse issue on first run)
+docker compose exec airflow-webserver \
+  airflow users create --username admin --password admin \
+  --firstname Admin --lastname JSL --role Admin --email admin@jsl.com || true
 for dag in sap_ingest medallion_transform data_quality; do
-  curl -sf -X PATCH -u admin:admin -H "Content-Type: application/json" \
+  curl -sf -X PATCH -H "Authorization: Basic $(echo -n 'admin:admin' | base64)" \
+    -H "Content-Type: application/json" \
     -d '{"is_paused": false}' "http://localhost:8085/api/v1/dags/${dag}"
 done
 
@@ -182,7 +187,8 @@ bash build-java.sh && docker compose up -d
 | **MinIO Console** | http://localhost:9001 | `jslmind` | `jslmind_minio_2024` |
 | MinIO API | http://localhost:9000 | `jslmind` | `jslmind_minio_2024` |
 | **Airflow** | http://localhost:8085 | `admin` | `admin` |
-| **Marquez (Lineage)** | http://localhost:5000 | — | open |
+| **Marquez UI** | http://localhost:3004 | — | open |
+| Marquez API | http://localhost:5000/api/v1 | — | open |
 | Camel Actuator | http://localhost:8090/actuator/health | — | open |
 
 ### Phase 5 — OT/CBM Streaming
@@ -494,8 +500,9 @@ docker compose logs -f rag-service   # wait for "Application startup complete"
 | 3001 | Grafana | 1 |
 | 3002 | Langfuse | 2 |
 | 3003 | Dify Web | 7 |
+| 3004 | Marquez Web UI | 4 |
 | 4000 | LiteLLM Proxy | 2 |
-| 5000 | Marquez (Lineage UI) | 4 |
+| 5000 | Marquez API | 4 |
 | 5001 | Dify API | 7 |
 | 5432 | Postgres (main) | 1 |
 | 5433 | TimescaleDB (sensors DB) | 5 |

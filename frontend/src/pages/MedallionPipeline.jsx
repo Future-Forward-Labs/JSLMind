@@ -119,7 +119,7 @@ export default function MedallionPipeline() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <LaunchButton href="http://localhost:8085" label="Airflow UI" />
-          <LaunchButton href="http://localhost:3003" label="Marquez" />
+          <LaunchButton href="http://localhost:3004" label="Marquez" />
           <LaunchButton href="http://localhost:9001" label="MinIO Console" />
         </div>
       </div>
